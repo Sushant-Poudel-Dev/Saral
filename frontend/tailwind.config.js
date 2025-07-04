@@ -13,6 +13,22 @@ module.exports = {
         montserrat: ["var(--font-montserrat)", "system-ui", "sans-serif"],
         roboto: ["var(--font-roboto)", "system-ui", "sans-serif"],
       },
+      colors: {
+        // Custom color palette
+        mint: "#BBEDC2",
+        coral: "#FBA69D",
+        plum: "#553E4E",
+        honey: "#F2C969",
+        sky: "#A6E5F2",
+        cream: "#F5F5F5",
+
+        primary: "#553E4E",
+        secondary: "#BBEDC2",
+        accent: "#F2C969",
+        highlight: "#FBA69D",
+        info: "#A6E5F2",
+        background: "#F5F5F5",
+      },
     },
   },
 };
