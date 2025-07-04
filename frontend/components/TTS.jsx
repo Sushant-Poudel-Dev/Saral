@@ -6,7 +6,7 @@ import VoiceSettings from "./VoiceSettings";
 import { useTTS } from "../hooks/useTTS";
 
 export default function TTS() {
-  const { speak, isLoading, error, clearError } = useTTS();
+  const { speak, stop, isLoading, isPlaying, error, clearError } = useTTS();
   const [voiceSettings, setVoiceSettings] = useState({
     language: "en",
     accent: "com",
@@ -17,36 +17,33 @@ export default function TTS() {
     setVoiceSettings(newSettings);
   }, []);
 
-  const handleTextSubmit = (text) => {
-    speak(text, voiceSettings);
+  const handleTextSubmit = (text, language) => {
+    const settings = {
+      ...voiceSettings,
+      language: language || voiceSettings.language,
+    };
+    speak(text, settings);
   };
 
   return (
-    <main className='p-8 max-w-4xl mx-auto'>
-      <h1>Text-to-Speech Demo</h1>
-
+    <main>
       {error && (
-        <div className='mb-6 p-4 bg-coral/20 border border-coral rounded-lg flex justify-between items-center'>
-          <span className='font-roboto text-plum'>{error}</span>
-          <button
-            onClick={clearError}
-            className='text-plum hover:text-coral font-bold text-xl transition-colors'
-          >
-            ×
-          </button>
+        <div>
+          <span>{error}</span>
+          <button onClick={clearError}>×</button>
         </div>
       )}
-
-      <div>
-        <VoiceSettings
-          onSettingsChange={handleSettingsChange}
-          isLoading={isLoading}
-        />
-
+      <div className='flex justify-evenly'>
         <TextInputForm
           onSubmit={handleTextSubmit}
+          onStop={stop}
           isLoading={isLoading}
+          isPlaying={isPlaying}
         />
+        {/* <VoiceSettings
+          onSettingsChange={handleSettingsChange}
+          isLoading={isLoading}
+        /> */}
       </div>
     </main>
   );

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import tts, edge_tts
+from routers import tts
 
 app = FastAPI()
 
@@ -14,4 +14,3 @@ app.add_middleware(
 
 # API routers
 app.include_router(tts.router)
-app.include_router(edge_tts.router)

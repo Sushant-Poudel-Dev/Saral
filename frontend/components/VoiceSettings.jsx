@@ -24,6 +24,8 @@ export default function VoiceSettings({ onSettingsChange, isLoading }) {
         setVoices({
           languages: [
             { code: "en", name: "English" },
+            { code: "ne", name: "Nepali" },
+            { code: "hi", name: "Hindi" },
             { code: "es", name: "Spanish" },
             { code: "fr", name: "French" },
             { code: "de", name: "German" },
@@ -63,7 +65,7 @@ export default function VoiceSettings({ onSettingsChange, isLoading }) {
   );
 
   return (
-    <div className='border-2 p-2'>
+    <div>
       <h3>Voice Settings</h3>
 
       <div className='flex flex-col gap-5'>
@@ -92,7 +94,7 @@ export default function VoiceSettings({ onSettingsChange, isLoading }) {
             ))}
           </select>
         </div>
-
+        {/* 
         {language === "en" && (
           <div>
             <label>Accent</label>
@@ -112,9 +114,8 @@ export default function VoiceSettings({ onSettingsChange, isLoading }) {
               ))}
             </select>
           </div>
-        )}
-
-        <div>
+        )} */}
+        {/* <div>
           <label>Speed</label>
           <select
             value={speed.toString()}
@@ -131,15 +132,7 @@ export default function VoiceSettings({ onSettingsChange, isLoading }) {
               </option>
             ))}
           </select>
-        </div>
-      </div>
-
-      <div>
-        <strong>Current:</strong>{" "}
-        {voices.languages.find((l) => l.code === language)?.name}
-        {language === "en" &&
-          ` (${availableAccents.find((a) => a.tld === accent)?.name})`}
-        {speed && " - Slow Speed"}
+        </div> */}
       </div>
     </div>
   );

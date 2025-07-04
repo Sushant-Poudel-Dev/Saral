@@ -46,6 +46,8 @@ def get_available_voices():
     return {
         "languages": [
             {"code": "en", "name": "English"},
+            {"code": "ne", "name": "Nepali"},
+            {"code": "hi", "name": "Hindi"},
             {"code": "es", "name": "Spanish"},
             {"code": "fr", "name": "French"},
             {"code": "de", "name": "German"},
@@ -54,7 +56,6 @@ def get_available_voices():
             {"code": "ja", "name": "Japanese"},
             {"code": "ko", "name": "Korean"},
             {"code": "zh", "name": "Chinese"},
-            {"code": "hi", "name": "Hindi"},
             {"code": "ar", "name": "Arabic"},
             {"code": "ru", "name": "Russian"}
         ],
