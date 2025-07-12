@@ -6,7 +6,17 @@ import VoiceSettings from "./VoiceSettings";
 import { useTTS } from "../hooks/useTTS";
 
 export default function TTS() {
-  const { speak, stop, isLoading, isPlaying, error, clearError } = useTTS();
+  const {
+    speak,
+    stop,
+    isLoading,
+    isPlaying,
+    currentText,
+    currentWordIndex,
+    currentCharIndex,
+    error,
+    clearError,
+  } = useTTS();
   const [voiceSettings, setVoiceSettings] = useState({
     language: "en",
     accent: "com",
@@ -39,6 +49,9 @@ export default function TTS() {
           onStop={stop}
           isLoading={isLoading}
           isPlaying={isPlaying}
+          currentText={currentText}
+          currentWordIndex={currentWordIndex}
+          currentCharIndex={currentCharIndex}
         />
         {/* <VoiceSettings
           onSettingsChange={handleSettingsChange}
