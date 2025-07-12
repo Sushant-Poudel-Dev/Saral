@@ -13,22 +13,26 @@ export default function TextInputForm({
 }) {
   const [text, setText] = useState("");
   const [language, setLanguage] = useState("en");
+  const [speed, setSpeed] = useState("normal");
 
   const availableLanguages = [
     { code: "en", name: "English" },
     { code: "ne", name: "Nepali" },
-    { code: "hi", name: "Hindi" },
-    { code: "es", name: "Spanish" },
-    { code: "fr", name: "French" },
-    { code: "de", name: "German" },
-    { code: "it", name: "Italian" },
-    { code: "pt", name: "Portuguese" },
+  ];
+
+  const availableSpeeds = [
+    { value: "slow", name: "Slow", rate: 0.5 },
+    { value: "normal", name: "Normal", rate: 1 },
+    { value: "fast", name: "Fast", rate: 1.5 },
   ];
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (text.trim()) {
-      onSubmit(text, language);
+      // Convert speed setting to appropriate format
+      const speedValue =
+        availableSpeeds.find((s) => s.value === speed)?.rate || 1;
+      onSubmit(text, language, { speed: speedValue });
     }
   };
 
@@ -62,7 +66,7 @@ export default function TextInputForm({
             return <span key={index}>{part}</span>;
           }
 
-          // If it's a word, apply highlighting
+          // If it's a word, apply highlighting for both English and Nepali
           if (part.trim()) {
             const isCurrentWord = wordIndex === currentWordIndex;
             const currentPart = (
@@ -138,6 +142,23 @@ export default function TextInputForm({
                 value={lang.code}
               >
                 {lang.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={speed}
+            onChange={(e) => setSpeed(e.target.value)}
+            disabled={isLoading}
+            className='border-1 p-2 hover:cursor-pointer hover:bg-gray-200 transition-colors duration-200'
+            title='Speech Speed'
+          >
+            {availableSpeeds.map((speedOption) => (
+              <option
+                key={speedOption.value}
+                value={speedOption.value}
+              >
+                {speedOption.name}
               </option>
             ))}
           </select>

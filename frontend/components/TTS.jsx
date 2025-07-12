@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import TextInputForm from "./TextInputForm";
-import VoiceSettings from "./VoiceSettings";
 import { useTTS } from "../hooks/useTTS";
 
 export default function TTS() {
@@ -17,33 +16,26 @@ export default function TTS() {
     error,
     clearError,
   } = useTTS();
-  const [voiceSettings, setVoiceSettings] = useState({
-    language: "en",
-    accent: "com",
-    speed: false,
-  });
 
-  const handleSettingsChange = useCallback((newSettings) => {
-    setVoiceSettings(newSettings);
-  }, []);
-
-  const handleTextSubmit = (text, language) => {
-    const settings = {
-      ...voiceSettings,
-      language: language || voiceSettings.language,
-    };
+  const handleTextSubmit = (text, language, voiceSettings = {}) => {
+    const settings = { language, ...voiceSettings };
     speak(text, settings);
   };
 
   return (
     <main>
       {error && (
-        <div>
+        <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4'>
           <span>{error}</span>
-          <button onClick={clearError}>×</button>
+          <button
+            onClick={clearError}
+            className='float-right font-bold text-red-700 hover:text-red-900'
+          >
+            ×
+          </button>
         </div>
       )}
-      <div className='flex justify-evenly'>
+      <div className='flex justify-center'>
         <TextInputForm
           onSubmit={handleTextSubmit}
           onStop={stop}
@@ -53,10 +45,6 @@ export default function TTS() {
           currentWordIndex={currentWordIndex}
           currentCharIndex={currentCharIndex}
         />
-        {/* <VoiceSettings
-          onSettingsChange={handleSettingsChange}
-          isLoading={isLoading}
-        /> */}
       </div>
     </main>
   );
