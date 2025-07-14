@@ -9,6 +9,9 @@ export const useTTS = () => {
   const [currentText, setCurrentText] = useState("");
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const [currentCharIndex, setCurrentCharIndex] = useState(-1);
+  const [enableParagraphIsolation, setEnableParagraphIsolation] =
+    useState(false);
+  const [enableSentenceIsolation, setEnableSentenceIsolation] = useState(false);
 
   const currentAudioRef = useRef(null);
   const utteranceRef = useRef(null);
@@ -31,10 +34,18 @@ export const useTTS = () => {
     setCurrentCharIndex(-1);
     isStoppedRef.current = false;
 
+    // Store paragraph and sentence isolation settings
+    if (voiceSettings.enableParagraphIsolation !== undefined) {
+      setEnableParagraphIsolation(voiceSettings.enableParagraphIsolation);
+    }
+    if (voiceSettings.enableSentenceIsolation !== undefined) {
+      setEnableSentenceIsolation(voiceSettings.enableSentenceIsolation);
+    }
+
     const language = voiceSettings.language || "en";
 
-    // Use Web Speech API for English (better real-time highlighting)
-    // Use gTTS for Nepali (more reliable with simulated highlighting)
+    // Use Web Speech API for English
+    // Use gTTS for Nepali
     if (language === "en") {
       await speakWithWebSpeech(text, voiceSettings);
     } else if (language === "ne") {
@@ -145,7 +156,7 @@ export const useTTS = () => {
       // Track speech start time to detect immediate failures
       let speechStartTime = null;
 
-      // Word boundary event - this is where the magic happens!
+      // Word boundary event
       utterance.onboundary = (event) => {
         if (isStoppedRef.current) return;
 
@@ -544,5 +555,9 @@ export const useTTS = () => {
     currentCharIndex,
     error,
     clearError,
+    enableParagraphIsolation,
+    setEnableParagraphIsolation,
+    enableSentenceIsolation,
+    setEnableSentenceIsolation,
   };
 };

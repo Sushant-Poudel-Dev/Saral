@@ -7,10 +7,8 @@ import path from "path";
 async function createTTS(text, lang, slow) {
   const gTTS = (await import("gtts")).default;
 
-  // Map language codes to gTTS supported codes
-  // Note: gTTS doesn't actually support Nepali (ne), so we use Hindi (hi) as fallback
   const langMap = {
-    ne: "hi", // Nepali -> Hindi fallback (same script, similar pronunciation)
+    ne: "hi", // Nepali -> Hindi fallback
     en: "en", // English
     hi: "hi", // Hindi
     es: "es", // Spanish
@@ -27,7 +25,6 @@ async function createTTS(text, lang, slow) {
     }`
   );
 
-  // Test if this is a problematic character set
   console.log(`Creating TTS for text: "${text}" with length: ${text.length}`);
 
   try {
@@ -56,11 +53,9 @@ export async function GET(request) {
       );
     }
 
-    // Create a temporary file
     const filename = `${uuidv4()}.mp3`;
     const tempDir = path.join(process.cwd(), "temp");
 
-    // Ensure temp directory exists
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }

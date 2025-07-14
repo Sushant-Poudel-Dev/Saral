@@ -15,6 +15,10 @@ export default function TTS() {
     currentCharIndex,
     error,
     clearError,
+    enableParagraphIsolation,
+    setEnableParagraphIsolation,
+    enableSentenceIsolation,
+    setEnableSentenceIsolation,
   } = useTTS();
 
   const handleTextSubmit = (text, language, voiceSettings = {}) => {
@@ -44,6 +48,10 @@ export default function TTS() {
           currentText={currentText}
           currentWordIndex={currentWordIndex}
           currentCharIndex={currentCharIndex}
+          enableParagraphIsolation={enableParagraphIsolation}
+          setEnableParagraphIsolation={setEnableParagraphIsolation}
+          enableSentenceIsolation={enableSentenceIsolation}
+          setEnableSentenceIsolation={setEnableSentenceIsolation}
         />
       </div>
     </main>
