@@ -1,22 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f5f5;
+  --background: #efe9e4;
   --foreground: #171717;
 
+  /* Color palette */
+  --green: #bbedc2;
+  --pink: #fba69d;
+  --darkblue: #463440;
+  --yellow: #f2c969;
+  --blue: #a6e5f2;
+  --honey: #dcb760;
+  --cream: #f5f5f5;
+
+  /* Legacy names for backward compatibility */
   --mint: #bbedc2;
   --coral: #fba69d;
   --plum: #553e4e;
-  --honey: #f2c969;
   --sky: #a6e5f2;
-  --cream: #f5f5f5;
 
-  --primary: var(--plum);
-  --secondary: var(--mint);
+  /* Semantic colors */
+  --primary: var(--darkblue);
+  --secondary: var(--green);
   --accent: var(--honey);
-  --highlight: var(--coral);
-  --info: var(--sky);
+  --highlight: var(--pink);
+  --info: var(--blue);
+  --warning: var(--yellow);
 
+  /* Fonts */
   --font-inter: "Inter", sans-serif;
   --font-lexend: "Lexend", sans-serif;
   --font-roboto: "Roboto", sans-serif;
@@ -25,8 +36,27 @@
 
 body {
   background: var(--background);
-  color: var(--foreground);
+  color: var(--darkblue);
   font-family: var(--font-lexend), system-ui, sans-serif;
+}
+
+h1 {
+  font-size: 4rem;
+  font-weight: 500;
+  color: var(--primary);
+  line-height: 4rem;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 350;
+  color: var(--primary);
+}
+
+p {
+  font-size: 1rem;
+  font-weight: 350;
+  color: var(--primary);
 }
 
 @keyframes pulse {
@@ -43,4 +73,44 @@ body {
 
 .pulse {
   animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Custom utility classes to ensure colors work */
+.bg-honey {
+  background-color: var(--honey) !important;
+}
+
+.bg-green {
+  background-color: var(--green) !important;
+}
+
+.bg-pink {
+  background-color: var(--pink) !important;
+}
+
+.bg-darkblue {
+  background-color: var(--darkblue) !important;
+}
+
+.bg-yellow {
+  background-color: var(--yellow) !important;
+}
+
+.bg-blue {
+  background-color: var(--blue) !important;
 }
