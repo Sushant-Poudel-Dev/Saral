@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useWordDefinition } from "../hooks/useWordDefinition";
+import WordDefinitionTooltip from "./ui/WordDefinitionTooltip";
 
 export default function TextInputForm({
   onSubmit,
@@ -20,6 +22,18 @@ export default function TextInputForm({
   const [speed, setSpeed] = useState("normal");
   const [letterSpacing, setLetterSpacing] = useState(0); // in em units
   const [lineHeight, setLineHeight] = useState(1.5); // multiplier
+
+  // Word definition hook
+  const {
+    definition,
+    isLoading: definitionLoading,
+    error: definitionError,
+    isVisible: definitionVisible,
+    position: mousePosition,
+    handleWordHover,
+    handleWordLeave,
+    hideDefinition,
+  } = useWordDefinition();
 
   const availableLanguages = [
     { code: "en", name: "English" },
@@ -57,6 +71,158 @@ export default function TextInputForm({
 
   const getLineHeightValue = () => {
     return lineHeight;
+  };
+
+  // Helper function to create hoverable words
+  const createHoverableWord = (
+    word,
+    index,
+    isCurrentWord = false,
+    additionalClasses = ""
+  ) => {
+    return (
+      <span
+        key={index}
+        className={`
+          hover:bg-blue-100 cursor-help transition-all duration-200 ease-in-out px-1 rounded
+          ${isCurrentWord ? "text-white" : "text-gray-800"}
+          ${additionalClasses}
+        `}
+        style={{
+          backgroundColor: isCurrentWord ? "#5bb8d6" : "transparent",
+        }}
+        onMouseEnter={(e) => handleWordHover(word, e)}
+        onMouseLeave={handleWordLeave}
+      >
+        {word}
+      </span>
+    );
+  };
+
+  // Function to get word at mouse position in textarea
+  const getWordAtPosition = (textarea, clientX, clientY) => {
+    try {
+      const rect = textarea.getBoundingClientRect();
+      const x =
+        clientX -
+        rect.left -
+        parseInt(window.getComputedStyle(textarea).paddingLeft || "0");
+      const y =
+        clientY -
+        rect.top -
+        parseInt(window.getComputedStyle(textarea).paddingTop || "0");
+
+      const text = textarea.value;
+      if (!text.trim()) return null;
+
+      const style = window.getComputedStyle(textarea);
+      const fontSize = parseFloat(style.fontSize) || 16;
+      const lineHeight = parseFloat(style.lineHeight) || fontSize * 1.2;
+
+      // Calculate which line we're on
+      const lineIndex = Math.floor(y / lineHeight);
+      const lines = text.split("\n");
+
+      if (lineIndex < 0 || lineIndex >= lines.length) return null;
+
+      const lineText = lines[lineIndex];
+      if (!lineText || !lineText.trim()) return null;
+
+      // Create a canvas to measure text width more accurately
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.font = `${style.fontSize} ${style.fontFamily}`;
+
+      // Check if the x position is beyond the actual text width
+      const lineWidth = ctx.measureText(lineText).width;
+      if (x > lineWidth + 5) return null; // Add 5px tolerance
+
+      // Find the character position by measuring text width
+      let charIndex = 0;
+
+      for (let i = 0; i <= lineText.length; i++) {
+        const substring = lineText.substring(0, i);
+        const measuredWidth = ctx.measureText(substring).width;
+
+        if (measuredWidth > x) {
+          charIndex = Math.max(0, i - 1);
+          break;
+        }
+        charIndex = i;
+      }
+
+      // Make sure we're within bounds
+      if (charIndex >= lineText.length) charIndex = lineText.length - 1;
+      if (charIndex < 0) return null;
+
+      // Check if the character at this position is actually a letter/word character
+      const charAtPosition = lineText[charIndex];
+      if (!charAtPosition || !/\w/.test(charAtPosition)) return null;
+
+      // Find start of word
+      let wordStart = charIndex;
+      while (wordStart > 0 && /\w/.test(lineText[wordStart - 1])) {
+        wordStart--;
+      }
+
+      // Find end of word
+      let wordEnd = charIndex;
+      while (wordEnd < lineText.length && /\w/.test(lineText[wordEnd])) {
+        wordEnd++;
+      }
+
+      // Extract the word
+      const word = lineText.substring(wordStart, wordEnd);
+
+      // Return word if it's valid (more than 1 character and contains letters)
+      if (word.length > 1 && /[a-zA-Z]/.test(word)) {
+        return word.toLowerCase();
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error getting word at position:", error);
+      return null;
+    }
+  };
+
+  // Handle textarea mouse events for word detection
+  let lastDetectedWord = null;
+
+  const handleTextareaMouseMove = (e) => {
+    // Don't process mouse events if tooltip is visible
+    if (definitionVisible) return;
+
+    if (!e.target.value.trim()) return;
+
+    const word = getWordAtPosition(e.target, e.clientX, e.clientY);
+    console.log("Mouse position:", { x: e.clientX, y: e.clientY });
+    console.log("Detected word:", word);
+
+    // Only process if word changed to avoid excessive calls
+    if (word !== lastDetectedWord) {
+      lastDetectedWord = word;
+
+      if (word && word.length > 1) {
+        e.target.title = "";
+
+        // Immediately trigger hover - let the hook handle the 2-second delay
+        console.log("Triggering hover for word:", word);
+        handleWordHover(word, e);
+      } else {
+        e.target.title = "";
+        handleWordLeave();
+      }
+    }
+  };
+
+  const handleTextareaMouseLeave = (e) => {
+    // Don't process mouse leave if tooltip is visible
+    if (definitionVisible) return;
+
+    lastDetectedWord = null;
+    e.target.title = "";
+    handleWordLeave();
   };
 
   const renderTextWithWordHighlight = () => {
@@ -169,7 +335,6 @@ export default function TextInputForm({
             resize: "none",
             fontFamily: "inherit",
             lineHeight: getLineHeightValue(),
-            letterSpacing: getLetterSpacingValue(),
             whiteSpace: "pre-wrap",
           }}
         >
@@ -182,23 +347,10 @@ export default function TextInputForm({
             // If it's a word, apply highlighting
             if (part.trim()) {
               const isCurrentWord = wordIndex === currentWordIndex;
-              const currentPart = (
-                <span
-                  key={index}
-                  className={`
-                    transition-colors duration-200 ease-in-out
-                    ${
-                      isCurrentWord
-                        ? "text-white px-1 rounded"
-                        : "text-gray-800"
-                    }
-                  `}
-                  style={{
-                    backgroundColor: isCurrentWord ? "#5bb8d6" : "transparent",
-                  }}
-                >
-                  {part}
-                </span>
+              const currentPart = createHoverableWord(
+                part,
+                index,
+                isCurrentWord
               );
               wordIndex++;
               return currentPart;
@@ -221,7 +373,6 @@ export default function TextInputForm({
             resize: "none",
             fontFamily: "inherit",
             lineHeight: getLineHeightValue(),
-            letterSpacing: getLetterSpacingValue(),
             whiteSpace: "pre-wrap",
           }}
         >
@@ -271,25 +422,10 @@ export default function TextInputForm({
                         if (part.trim()) {
                           const isCurrentWord =
                             globalWordIndex === currentWordIndex;
-                          const currentPart = (
-                            <span
-                              key={partIndex}
-                              className={`
-                                transition-colors duration-200 ease-in-out
-                                ${
-                                  isCurrentWord
-                                    ? "text-white px-1 rounded"
-                                    : "text-gray-800"
-                                }
-                              `}
-                              style={{
-                                backgroundColor: isCurrentWord
-                                  ? "#5bb8d6"
-                                  : "transparent",
-                              }}
-                            >
-                              {part}
-                            </span>
+                          const currentPart = createHoverableWord(
+                            part,
+                            partIndex,
+                            isCurrentWord
                           );
                           globalWordIndex++;
                           return currentPart;
@@ -317,7 +453,6 @@ export default function TextInputForm({
           resize: "none",
           fontFamily: "inherit",
           lineHeight: getLineHeightValue(),
-          letterSpacing: getLetterSpacingValue(),
           whiteSpace: "pre-wrap",
         }}
       >
@@ -349,25 +484,10 @@ export default function TextInputForm({
                 // If it's a word, apply highlighting
                 if (part.trim()) {
                   const isCurrentWord = globalWordIndex === currentWordIndex;
-                  const currentPart = (
-                    <span
-                      key={partIndex}
-                      className={`
-                        transition-colors duration-200 ease-in-out
-                        ${
-                          isCurrentWord
-                            ? "text-white px-1 rounded"
-                            : "text-gray-800"
-                        }
-                      `}
-                      style={{
-                        backgroundColor: isCurrentWord
-                          ? "#5bb8d6"
-                          : "transparent",
-                      }}
-                    >
-                      {part}
-                    </span>
+                  const currentPart = createHoverableWord(
+                    part,
+                    partIndex,
+                    isCurrentWord
                   );
                   globalWordIndex++;
                   return currentPart;
@@ -393,6 +513,8 @@ export default function TextInputForm({
               id='textInput'
               value={text}
               onChange={(e) => setText(e.target.value)}
+              onMouseMove={handleTextareaMouseMove}
+              onMouseLeave={handleTextareaMouseLeave}
               placeholder='Type something here...'
               className='border-1 w-full h-full mt-2 p-2 bg-white text-lg'
               style={{
@@ -543,6 +665,16 @@ export default function TextInputForm({
           </label>
         </div>
       </form>
+
+      {/* Word Definition Tooltip */}
+      <WordDefinitionTooltip
+        definition={definition}
+        isLoading={definitionLoading}
+        error={definitionError}
+        isVisible={definitionVisible}
+        position={mousePosition}
+        onClose={hideDefinition}
+      />
     </div>
   );
 }
