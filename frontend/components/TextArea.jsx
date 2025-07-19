@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useWordDefinition } from "../hooks/useWordDefinition";
 import WordDefinitionTooltip from "./ui/WordDefinitionTooltip";
+import Clear from "@/media/Clear.svg";
 
 export default function TextArea({
   text,
   setText,
+  onClear, // Add onClear prop
   isLoading = false,
   isPlaying = false,
   currentText = "",
@@ -17,6 +19,7 @@ export default function TextArea({
   letterSpacing = 0,
   lineHeight = 1.5,
   language = "en", // Add language prop
+  className = "", // Add className prop
 }) {
   // Word definition hook
   const {
@@ -288,7 +291,7 @@ export default function TextArea({
 
     return (
       <div
-        className='border-1 w-full h-full mt-2 p-2 bg-white text-lg overflow-auto'
+        className={`text-lg overflow-auto ${className}`}
         style={{
           resize: "none",
           fontFamily: "inherit",
@@ -468,8 +471,22 @@ export default function TextArea({
   };
 
   return (
-    <div className='flex flex-col w-[60rem] h-[20rem] mt-6'>
-      <h1 className='text-2xl'>Enter text to speak</h1>
+    <div className='relative'>
+      {/* Clear Button - Top Right */}
+      {text && (
+        <button
+          onClick={onClear}
+          disabled={isLoading}
+          className='absolute top-2 right-2 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer'
+          title='Clear Text'
+        >
+          <img
+            src={Clear.src}
+            alt='Clear'
+            className='w-4 h-4'
+          />
+        </button>
+      )}
 
       {!isPlaying ? (
         <textarea
@@ -479,7 +496,7 @@ export default function TextArea({
           onMouseMove={handleTextareaMouseMove}
           onMouseLeave={handleTextareaMouseLeave}
           placeholder='Type something here...'
-          className='border-1 w-full h-full mt-2 p-2 bg-white text-lg'
+          className={`text-lg ${className}`}
           style={{
             lineHeight: getLineHeightValue(),
             letterSpacing: getLetterSpacingValue(),

@@ -24,7 +24,6 @@ export default function FeaturePage() {
 
   // Local state for the separated components
   const [text, setText] = useState("");
-  const [language, setLanguage] = useState("en");
   const [speed, setSpeed] = useState("normal");
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [lineHeight, setLineHeight] = useState(1.5);
@@ -35,16 +34,73 @@ export default function FeaturePage() {
     { value: "fast", name: "Fast", rate: 1.5 },
   ];
 
+  // Function to detect primary language based on beginning of text
+  const detectLanguage = (text) => {
+    // Get the first word or first few characters to determine primary language
+    const trimmedText = text.trim();
+
+    // Devanagari script range for Nepali
+    const nepaliRegex = /[\u0900-\u097F]/;
+
+    // Check the very first character that's not whitespace or punctuation
+    for (let i = 0; i < trimmedText.length; i++) {
+      const char = trimmedText[i];
+      // Skip whitespace and common punctuation
+      if (char.match(/[\s.,!?;:()[\]{}"'-]/)) {
+        continue;
+      }
+
+      // Check if the first meaningful character is Nepali
+      if (nepaliRegex.test(char)) {
+        return "ne";
+      }
+
+      // If we find an English letter or number first, it's English
+      if (char.match(/[a-zA-Z0-9]/)) {
+        return "en";
+      }
+    }
+
+    // Default to English if no clear determination
+    return "en";
+  };
+
+  // Function to filter text for TTS based on primary language
+  const filterTextForTTS = (text, primaryLanguage) => {
+    const nepaliRegex = /[\u0900-\u097F]/g;
+
+    if (primaryLanguage === "ne") {
+      // If primary language is Nepali, extract only Nepali words for TTS
+      // Replace English characters with spaces but keep structure
+      return text
+        .replace(/[a-zA-Z0-9]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    } else {
+      // If primary language is English, extract only English words for TTS
+      // Replace Nepali characters with spaces but keep structure
+      return text.replace(nepaliRegex, " ").replace(/\s+/g, " ").trim();
+    }
+  };
+
   const handleTextSubmit = () => {
     if (text.trim()) {
+      // Automatically detect primary language from beginning of text
+      const detectedLanguage = detectLanguage(text);
+
       const speedValue =
         availableSpeeds.find((s) => s.value === speed)?.rate || 1;
       const settings = {
-        language,
+        language: detectedLanguage,
         speed: speedValue,
         enableParagraphIsolation,
         enableSentenceIsolation,
+        // Pass the filtering information to TTS instead of filtering here
+        primaryLanguage: detectedLanguage,
+        filterByLanguage: true,
       };
+
+      // Pass the original text - let TTS handle the filtering internally
       speak(text, settings);
     }
   };
@@ -76,13 +132,12 @@ export default function FeaturePage() {
         </div>
       )}
 
-      {/* Separated components with TTS functionality */}
-      <div className='flex flex-col gap-4'>
-        {/* Textarea in one section */}
-        <div className='flex justify-center'>
+      <div className='mx-4 mt-6 flex gap-4 justify-center items-start'>
+        <div className='w-full'>
           <TextArea
             text={text}
             setText={setText}
+            onClear={handleClear}
             isLoading={isLoading}
             isPlaying={isPlaying}
             currentText={currentText}
@@ -92,20 +147,15 @@ export default function FeaturePage() {
             enableSentenceIsolation={enableSentenceIsolation}
             letterSpacing={letterSpacing}
             lineHeight={lineHeight}
-            language={language}
+            className='bg-white drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-2 h-[40rem] resize-none'
           />
         </div>
-
-        {/* Controls in another section */}
-        <div className='flex justify-center'>
+        <div className='h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
           <TTSControls
             onSubmit={handleTextSubmit}
             onStop={stop}
-            onClear={handleClear}
             isLoading={isLoading}
             isPlaying={isPlaying}
-            language={language}
-            setLanguage={setLanguage}
             speed={speed}
             setSpeed={setSpeed}
             enableParagraphIsolation={enableParagraphIsolation}
@@ -117,6 +167,7 @@ export default function FeaturePage() {
             lineHeight={lineHeight}
             setLineHeight={setLineHeight}
             hasText={text.trim().length > 0}
+            className='flex flex-col w-full bg-white'
           />
         </div>
       </div>

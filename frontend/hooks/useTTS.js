@@ -29,7 +29,7 @@ export const useTTS = () => {
 
     setIsLoading(true);
     setError(null);
-    setCurrentText(text);
+    setCurrentText(text); // Keep original text for display
     setCurrentWordIndex(-1);
     setCurrentCharIndex(-1);
     isStoppedRef.current = false;
@@ -44,15 +44,43 @@ export const useTTS = () => {
 
     const language = voiceSettings.language || "en";
 
+    // Filter text for TTS if language filtering is enabled
+    let textToSpeak = text;
+    if (voiceSettings.filterByLanguage && voiceSettings.primaryLanguage) {
+      textToSpeak = filterTextForTTS(text, voiceSettings.primaryLanguage);
+
+      if (!textToSpeak.trim()) {
+        setError("No text to speak in the detected language");
+        setIsLoading(false);
+        return;
+      }
+    }
+
     // Use Web Speech API for English
     // Use gTTS for Nepali
     if (language === "en") {
-      await speakWithWebSpeech(text, voiceSettings);
+      await speakWithWebSpeech(textToSpeak, voiceSettings);
     } else if (language === "ne") {
-      await speakWithGTTSAndHighlighting(text, voiceSettings);
+      await speakWithGTTSAndHighlighting(textToSpeak, voiceSettings);
     } else {
       setError("Only English and Nepali languages are supported");
       setIsLoading(false);
+    }
+  };
+
+  // Function to filter text for TTS based on primary language
+  const filterTextForTTS = (text, primaryLanguage) => {
+    const nepaliRegex = /[\u0900-\u097F]/g;
+
+    if (primaryLanguage === "ne") {
+      // If primary language is Nepali, extract only Nepali words for TTS
+      return text
+        .replace(/[a-zA-Z0-9]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    } else {
+      // If primary language is English, extract only English words for TTS
+      return text.replace(nepaliRegex, " ").replace(/\s+/g, " ").trim();
     }
   };
 

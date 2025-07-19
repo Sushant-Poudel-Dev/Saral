@@ -114,3 +114,76 @@ p {
 .bg-blue {
   background-color: var(--blue) !important;
 }
+
+/* Tailwind-compatible Range Slider Styles */
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #334155;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.slider:hover::-webkit-slider-thumb {
+  background: #1e293b;
+  transform: scale(1.1);
+}
+
+.slider:hover::-moz-range-thumb {
+  background: #1e293b;
+  transform: scale(1.1);
+}
+
+.slider:disabled::-webkit-slider-thumb {
+  background: #cbd5e1;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.slider:disabled::-moz-range-thumb {
+  background: #cbd5e1;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Tailwind-compatible Checkbox Styles */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+input[type="checkbox"]:checked {
+  background-color: #334155;
+  border-color: #334155;
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m13.854 3.646-7.5 7.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6 10.293l7.146-7.147a.5.5 0 0 1 .708.708z'/%3e%3c/svg%3e");
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+input[type="checkbox"]:hover {
+  border-color: #94a3b8;
+}
+
+input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1);
+}
+
+input[type="checkbox"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
