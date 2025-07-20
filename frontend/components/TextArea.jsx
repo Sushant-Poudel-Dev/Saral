@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useWordDefinition } from "../hooks/useWordDefinition";
 import WordDefinitionTooltip from "./ui/WordDefinitionTooltip";
+import DocumentUpload from "./DocumentUpload";
 import Clear from "@/media/Clear.svg";
 
 export default function TextArea({
   text,
   setText,
   onClear, // Add onClear prop
+  onTextExtracted, // Add onTextExtracted prop for document upload
   isLoading = false,
   isPlaying = false,
   currentText = "",
@@ -18,9 +20,140 @@ export default function TextArea({
   enableSentenceIsolation = false,
   letterSpacing = 0,
   lineHeight = 1.5,
+  fontSize = 16,
+  fontFamily = "var(--font-lexend)",
   language = "en", // Add language prop
   className = "", // Add className prop
+  enableHighlighting = false, // Add highlighting toggle prop
 }) {
+  // Definitions mode toggle
+  const [definitionsMode, setDefinitionsMode] = useState(false);
+  // Cache for isolation calculations to prevent lag
+  const isolationCacheRef = useRef({
+    lastWordIndex: -1,
+    lastText: "",
+    wordOpacities: new Map(),
+    paragraphs: [],
+    sentences: [],
+  });
+
+  // Pre-calculate text structure when text changes
+  const textStructure = useMemo(() => {
+    if (!currentText)
+      return {
+        words: [],
+        paragraphs: [],
+        sentences: [],
+        wordToParagraph: new Map(),
+        wordToSentence: new Map(),
+      };
+
+    console.log("Recalculating text structure...");
+
+    // Split text into words with positions
+    const words = [];
+    const wordMatches = currentText.matchAll(/\S+/g);
+
+    for (const match of wordMatches) {
+      words.push({
+        text: match[0],
+        start: match.index,
+        end: match.index + match[0].length,
+        index: words.length,
+      });
+    }
+
+    // Calculate paragraph boundaries
+    const paragraphTexts = currentText.split(/\n\s*\n/);
+    const paragraphs = [];
+    let currentPos = 0;
+
+    for (let i = 0; i < paragraphTexts.length; i++) {
+      const paragraphText = paragraphTexts[i];
+      const start = currentText.indexOf(paragraphText, currentPos);
+      const end = start + paragraphText.length;
+
+      paragraphs.push({
+        index: i,
+        start: start,
+        end: end,
+        text: paragraphText,
+      });
+
+      currentPos = end;
+    }
+
+    // Calculate sentence boundaries
+    const sentences = [];
+    const sentenceRegex = /[.!?]+/g;
+    let sentenceMatch;
+    let lastEnd = 0;
+    let sentenceIndex = 0;
+
+    while ((sentenceMatch = sentenceRegex.exec(currentText)) !== null) {
+      const end = sentenceMatch.index + sentenceMatch[0].length;
+      const sentenceText = currentText.substring(lastEnd, end).trim();
+
+      if (sentenceText.length > 0) {
+        sentences.push({
+          index: sentenceIndex,
+          start: lastEnd,
+          end: end,
+          text: sentenceText,
+        });
+        sentenceIndex++;
+      }
+
+      lastEnd = end;
+    }
+
+    // Add the last sentence if there's remaining text
+    if (lastEnd < currentText.length) {
+      const lastSentenceText = currentText.substring(lastEnd).trim();
+      if (lastSentenceText.length > 0) {
+        sentences.push({
+          index: sentenceIndex,
+          start: lastEnd,
+          end: currentText.length,
+          text: lastSentenceText,
+        });
+      }
+    }
+
+    // Create mapping from word index to paragraph/sentence
+    const wordToParagraph = new Map();
+    const wordToSentence = new Map();
+
+    words.forEach((word) => {
+      // Find which paragraph this word belongs to
+      const paragraph = paragraphs.find(
+        (p) => word.start >= p.start && word.end <= p.end
+      );
+      if (paragraph) {
+        wordToParagraph.set(word.index, paragraph.index);
+      }
+
+      // Find which sentence this word belongs to
+      const sentence = sentences.find(
+        (s) => word.start >= s.start && word.end <= s.end
+      );
+      if (sentence) {
+        wordToSentence.set(word.index, sentence.index);
+      }
+    });
+
+    console.log(
+      `Text structure: ${words.length} words, ${paragraphs.length} paragraphs, ${sentences.length} sentences`
+    );
+
+    return {
+      words,
+      paragraphs,
+      sentences,
+      wordToParagraph,
+      wordToSentence,
+    };
+  }, [currentText]); // Recalculate when currentText changes
   // Word definition hook
   const {
     definition,
@@ -49,8 +182,13 @@ export default function TextArea({
     isCurrentWord = false,
     additionalClasses = ""
   ) => {
-    // Disable hover functionality for non-English languages
-    const shouldEnableHover = language === "en";
+    // Extract the clean word for hover functionality (remove punctuation)
+    const cleanWord = word.replace(/[^\w]/g, "").toLowerCase();
+    const shouldEnableHover =
+      language === "en" && cleanWord.length > 1 && /[a-zA-Z]/.test(cleanWord);
+
+    // Only apply highlighting if enableHighlighting is true
+    const shouldHighlight = enableHighlighting && isCurrentWord;
 
     return (
       <span
@@ -59,14 +197,14 @@ export default function TextArea({
           ${
             shouldEnableHover ? "hover:bg-blue-100 cursor-help" : ""
           } transition-all duration-200 ease-in-out px-1 rounded
-          ${isCurrentWord ? "text-white" : "text-gray-800"}
+          ${shouldHighlight ? "text-white" : "text-gray-800"}
           ${additionalClasses}
         `}
         style={{
-          backgroundColor: isCurrentWord ? "#5bb8d6" : "transparent",
+          backgroundColor: shouldHighlight ? "#5bb8d6" : "transparent",
         }}
         onMouseEnter={
-          shouldEnableHover ? (e) => handleWordHover(word, e) : undefined
+          shouldEnableHover ? (e) => handleWordHover(cleanWord, e) : undefined
         }
         onMouseLeave={shouldEnableHover ? handleWordLeave : undefined}
       >
@@ -107,7 +245,7 @@ export default function TextArea({
       // Create a canvas to measure text width more accurately
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
-      ctx.font = `${style.fontSize} ${style.fontFamily}`;
+      ctx.font = `${fontSize}px ${fontFamily}`;
 
       // Check if the x position is beyond the actual text width
       const lineWidth = ctx.measureText(lineText).width;
@@ -201,25 +339,32 @@ export default function TextArea({
     handleWordLeave();
   };
 
-  // Helper function to split text into sentences properly
-  const splitIntoSentences = (text) => {
-    // Split by sentence-ending punctuation while preserving the structure
-    const sentences = text.split(/([.!?]+\s*)/);
-    const result = [];
-
-    for (let i = 0; i < sentences.length; i += 2) {
-      const sentence = sentences[i];
-      const punctuation = sentences[i + 1] || "";
-      if (sentence.trim()) {
-        result.push(sentence + punctuation);
-      }
-    }
-
-    return result.filter((s) => s.trim().length > 0);
+  // Function to render normal mode (editable textarea, no hover definitions)
+  const renderNormalMode = () => {
+    return (
+      <textarea
+        id='textInput'
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder='Type something here...'
+        className={`text-lg ${className}`}
+        style={{
+          lineHeight: getLineHeightValue(),
+          letterSpacing: getLetterSpacingValue(),
+          fontSize: `${fontSize}px`,
+          fontFamily: fontFamily,
+        }}
+        rows='4'
+        disabled={isLoading}
+      />
+    );
   };
 
   const renderTextWithWordHighlight = () => {
-    if (!isPlaying || !currentText) {
+    // When playing speech, always use currentText, otherwise use the editable text
+    const textToUse = isPlaying && currentText ? currentText : text;
+
+    if (!textToUse) {
       return null;
     }
 
@@ -228,22 +373,22 @@ export default function TextArea({
     let wordIndex = 0;
 
     // Process character by character to preserve exact structure
-    for (let i = 0; i < currentText.length; i++) {
-      const char = currentText[i];
+    for (let i = 0; i < textToUse.length; i++) {
+      const char = textToUse[i];
 
       // Check if we're at the start of a word
-      if (/\w/.test(char) && (i === 0 || !/\w/.test(currentText[i - 1]))) {
+      if (/\w/.test(char) && (i === 0 || !/\w/.test(textToUse[i - 1]))) {
         // Find the end of this word
         let wordEnd = i;
-        while (
-          wordEnd < currentText.length &&
-          /\w/.test(currentText[wordEnd])
-        ) {
+        while (wordEnd < textToUse.length && /\w/.test(textToUse[wordEnd])) {
           wordEnd++;
         }
 
-        const word = currentText.substring(i, wordEnd);
+        const word = textToUse.substring(i, wordEnd);
         const isCurrentWord = wordIndex === currentWordIndex;
+
+        // Only apply highlighting if enableHighlighting is true
+        const shouldHighlight = enableHighlighting && isCurrentWord;
 
         // Calculate isolation opacity for this word
         let opacity = 1;
@@ -251,18 +396,31 @@ export default function TextArea({
           opacity = getWordOpacity(wordIndex);
         }
 
+        // Extract the clean word for hover functionality (remove punctuation)
+        const cleanWord = word.replace(/[^\w]/g, "").toLowerCase();
+        const shouldEnableHover =
+          language === "en" &&
+          cleanWord.length > 1 &&
+          /[a-zA-Z]/.test(cleanWord);
+
         textParts.push(
           <span
             key={`word-${wordIndex}-${i}`}
             className={`transition-all duration-200 ease-in-out ${
-              isCurrentWord ? "text-white" : "text-gray-800"
-            }`}
+              shouldHighlight ? "text-white" : "text-gray-800"
+            } ${shouldEnableHover ? "hover:bg-blue-100 cursor-help" : ""}`}
             style={{
-              backgroundColor: isCurrentWord ? "#5bb8d6" : "transparent",
-              borderRadius: isCurrentWord ? "4px" : "0",
-              padding: isCurrentWord ? "0 2px" : "0",
+              backgroundColor: shouldHighlight ? "#5bb8d6" : "transparent",
+              borderRadius: shouldHighlight ? "4px" : "0",
+              padding: shouldHighlight ? "0 2px" : "0",
               opacity: opacity,
             }}
+            onMouseEnter={
+              shouldEnableHover
+                ? (e) => handleWordHover(cleanWord, e)
+                : undefined
+            }
+            onMouseLeave={shouldEnableHover ? handleWordLeave : undefined}
           >
             {word}
           </span>
@@ -294,8 +452,10 @@ export default function TextArea({
         className={`text-lg overflow-auto ${className}`}
         style={{
           resize: "none",
-          fontFamily: "inherit",
+          fontFamily: fontFamily,
+          fontSize: `${fontSize}px`,
           lineHeight: getLineHeightValue(),
+          letterSpacing: getLetterSpacingValue(), // Add letter spacing
           whiteSpace: "pre-wrap", // Preserve all whitespace and line breaks
         }}
       >
@@ -304,180 +464,123 @@ export default function TextArea({
     );
   };
 
-  // Helper function to get opacity for a word based on isolation settings
+  // Optimized helper function to get opacity for a word based on isolation settings
   const getWordOpacity = (wordIndex) => {
     if (!currentText || currentWordIndex < 0) return 1;
+    if (!enableParagraphIsolation && !enableSentenceIsolation) return 1;
+    if (wordIndex === currentWordIndex) return 1; // Current word is always fully visible
 
-    // Split text into paragraphs and calculate word positions
-    const paragraphs = currentText.split(/\n\s*\n/);
-    let currentParagraphIndex = -1;
-    let currentSentenceIndex = -1;
-    let wordCount = 0;
+    // Use pre-calculated structure for fast lookups
+    const currentWordParagraph =
+      textStructure.wordToParagraph.get(currentWordIndex);
+    const currentWordSentence =
+      textStructure.wordToSentence.get(currentWordIndex);
 
-    // Find which paragraph contains the current word
-    for (let i = 0; i < paragraphs.length; i++) {
-      const paragraphWords = paragraphs[i]
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 0);
+    const wordParagraph = textStructure.wordToParagraph.get(wordIndex);
+    const wordSentence = textStructure.wordToSentence.get(wordIndex);
 
-      if (
-        currentWordIndex >= wordCount &&
-        currentWordIndex < wordCount + paragraphWords.length
-      ) {
-        currentParagraphIndex = i;
-        break;
-      }
-      wordCount += paragraphWords.length;
-    }
-
-    // Find which paragraph contains the word we're checking opacity for
-    let targetParagraphIndex = -1;
-    wordCount = 0;
-    for (let i = 0; i < paragraphs.length; i++) {
-      const paragraphWords = paragraphs[i]
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 0);
-
-      if (
-        wordIndex >= wordCount &&
-        wordIndex < wordCount + paragraphWords.length
-      ) {
-        targetParagraphIndex = i;
-        break;
-      }
-      wordCount += paragraphWords.length;
-    }
-
-    // For sentence isolation
+    // Sentence isolation takes precedence over paragraph isolation
     if (enableSentenceIsolation) {
-      // Find current sentence
-      let sentenceWordCount = 0;
-      let globalSentenceIndex = 0;
-
-      for (
-        let paragraphIndex = 0;
-        paragraphIndex < paragraphs.length;
-        paragraphIndex++
-      ) {
-        const paragraphSentences = splitIntoSentences(
-          paragraphs[paragraphIndex]
-        );
-
-        for (
-          let sentenceIndex = 0;
-          sentenceIndex < paragraphSentences.length;
-          sentenceIndex++
-        ) {
-          const sentenceWords = paragraphSentences[sentenceIndex]
-            .trim()
-            .split(/\s+/)
-            .filter((w) => w.length > 0);
-
-          if (
-            currentWordIndex >= sentenceWordCount &&
-            currentWordIndex < sentenceWordCount + sentenceWords.length
-          ) {
-            currentSentenceIndex = globalSentenceIndex;
-            break;
-          }
-
-          sentenceWordCount += sentenceWords.length;
-          globalSentenceIndex++;
-        }
-
-        if (currentSentenceIndex !== -1) break;
+      if (currentWordSentence !== undefined && wordSentence !== undefined) {
+        return currentWordSentence === wordSentence ? 1 : 0.3;
       }
-
-      // Find target sentence for the word we're checking
-      let targetSentenceIndex = -1;
-      sentenceWordCount = 0;
-      globalSentenceIndex = 0;
-
-      for (
-        let paragraphIndex = 0;
-        paragraphIndex < paragraphs.length;
-        paragraphIndex++
-      ) {
-        const paragraphSentences = splitIntoSentences(
-          paragraphs[paragraphIndex]
-        );
-
-        for (
-          let sentenceIndex = 0;
-          sentenceIndex < paragraphSentences.length;
-          sentenceIndex++
-        ) {
-          const sentenceWords = paragraphSentences[sentenceIndex]
-            .trim()
-            .split(/\s+/)
-            .filter((w) => w.length > 0);
-
-          if (
-            wordIndex >= sentenceWordCount &&
-            wordIndex < sentenceWordCount + sentenceWords.length
-          ) {
-            targetSentenceIndex = globalSentenceIndex;
-            break;
-          }
-
-          sentenceWordCount += sentenceWords.length;
-          globalSentenceIndex++;
-        }
-
-        if (targetSentenceIndex !== -1) break;
-      }
-
-      return targetSentenceIndex === currentSentenceIndex ? 1 : 0.3;
     }
 
-    // For paragraph isolation
+    // Fallback to paragraph isolation
     if (enableParagraphIsolation) {
-      return targetParagraphIndex === currentParagraphIndex ? 1 : 0.3;
+      if (currentWordParagraph !== undefined && wordParagraph !== undefined) {
+        return currentWordParagraph === wordParagraph ? 1 : 0.3;
+      }
     }
 
-    return 1;
+    return 1; // Default to full opacity if no isolation rules apply
   };
 
   // Helper function to get opacity for non-word characters (whitespace, punctuation)
   const getCharOpacity = (charIndex) => {
     if (!enableParagraphIsolation && !enableSentenceIsolation) return 1;
 
-    // Find the nearest word before this character
-    let nearestWordIndex = -1;
-    let wordIndex = 0;
+    // Find the word that this character belongs to or is closest to
+    const word = textStructure.words.find(
+      (w) => charIndex >= w.start && charIndex <= w.end
+    );
 
-    for (let i = 0; i < charIndex; i++) {
-      const char = currentText[i];
-      if (/\w/.test(char) && (i === 0 || !/\w/.test(currentText[i - 1]))) {
-        nearestWordIndex = wordIndex;
-        wordIndex++;
+    if (word) {
+      return getWordOpacity(word.index);
+    }
+
+    // If not within a word, find the nearest word
+    let nearestWord = null;
+    let minDistance = Infinity;
+
+    for (const word of textStructure.words) {
+      const distance = Math.min(
+        Math.abs(charIndex - word.start),
+        Math.abs(charIndex - word.end)
+      );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearestWord = word;
       }
     }
 
-    // If no word found before, check the word after
-    if (nearestWordIndex === -1) {
-      for (let i = charIndex; i < currentText.length; i++) {
-        const char = currentText[i];
-        if (/\w/.test(char) && (i === 0 || !/\w/.test(currentText[i - 1]))) {
-          nearestWordIndex = wordIndex;
-          break;
-        }
-      }
-    }
-
-    return nearestWordIndex !== -1 ? getWordOpacity(nearestWordIndex) : 1;
+    return nearestWord ? getWordOpacity(nearestWord.index) : 1;
   };
 
   return (
     <div className='relative'>
+      {/* Upload Document Button - Top Right */}
+      <DocumentUpload
+        onTextExtracted={onTextExtracted}
+        compact={true}
+        className='absolute top-1 right-24 z-10'
+      />
+
+      {/* Definition Toggle Button - Top Right (between upload and clear) */}
+      <button
+        onClick={() => setDefinitionsMode((v) => !v)}
+        className={`absolute top-1 right-14 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer ${
+          definitionsMode ? "bg-blue-50 border-blue-200" : ""
+        }`}
+        title={
+          definitionsMode
+            ? "Disable Definitions Mode"
+            : "Enable Definitions Mode"
+        }
+      >
+        <svg
+          width='16'
+          height='16'
+          viewBox='0 0 24 24'
+          fill='none'
+          xmlns='http://www.w3.org/2000/svg'
+          className={definitionsMode ? "text-blue-500" : "text-gray-500"}
+        >
+          <path
+            d='M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'
+            fill='currentColor'
+          />
+          <path
+            d='M7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z'
+            fill='currentColor'
+          />
+          <circle
+            cx='18'
+            cy='18'
+            r='5'
+            fill={definitionsMode ? "#3b82f6" : "#e5e7eb"}
+            stroke='currentColor'
+          />
+        </svg>
+      </button>
+
       {/* Clear Button - Top Right */}
       {text && (
         <button
           onClick={onClear}
           disabled={isLoading}
-          className='absolute top-2 right-2 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer'
+          className='absolute top-1 right-4 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer'
           title='Clear Text'
         >
           <img
@@ -488,36 +591,22 @@ export default function TextArea({
         </button>
       )}
 
-      {!isPlaying ? (
-        <textarea
-          id='textInput'
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onMouseMove={handleTextareaMouseMove}
-          onMouseLeave={handleTextareaMouseLeave}
-          placeholder='Type something here...'
-          className={`text-lg ${className}`}
-          style={{
-            lineHeight: getLineHeightValue(),
-            letterSpacing: getLetterSpacingValue(),
-            fontFamily: "inherit",
-          }}
-          rows='4'
-          disabled={isLoading}
-        />
-      ) : (
-        renderTextWithWordHighlight()
-      )}
+      {/* Main area: either editable textarea or span-rendered view mode */}
+      {isPlaying || definitionsMode
+        ? renderTextWithWordHighlight()
+        : renderNormalMode()}
 
-      {/* Word Definition Tooltip */}
-      <WordDefinitionTooltip
-        definition={definition}
-        isLoading={definitionLoading}
-        error={definitionError}
-        isVisible={definitionVisible}
-        position={mousePosition}
-        onClose={hideDefinition}
-      />
+      {/* Word Definition Tooltip (only in definitionsMode, not during playback) */}
+      {definitionsMode && !isPlaying && (
+        <WordDefinitionTooltip
+          definition={definition}
+          isLoading={definitionLoading}
+          error={definitionError}
+          isVisible={definitionVisible}
+          position={mousePosition}
+          onClose={hideDefinition}
+        />
+      )}
     </div>
   );
 }

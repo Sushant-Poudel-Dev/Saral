@@ -27,6 +27,9 @@ export default function FeaturePage() {
   const [speed, setSpeed] = useState("normal");
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [lineHeight, setLineHeight] = useState(1.5);
+  const [fontSize, setFontSize] = useState(16);
+  const [fontFamily, setFontFamily] = useState("var(--font-lexend)");
+  const [enableHighlighting, setEnableHighlighting] = useState(false);
 
   const availableSpeeds = [
     { value: "slow", name: "Slow", rate: 0.5 },
@@ -109,13 +112,17 @@ export default function FeaturePage() {
     setText("");
   };
 
+  const handleDocumentUpload = (extractedText) => {
+    setText(extractedText);
+  };
+
   return (
     <div>
       <div className='text-center mt-6 mb-2'>
         <h1>Make reading yours</h1>
         <h2 className='mx-70 mt-1'>
-          Upload a document, paste your text, or try our sample to begin your
-          personalized reading experience.
+          Upload a document (PDF, DOC, DOCX, TXT), paste your text, or try our
+          sample to begin your personalized reading experience.
         </h2>
       </div>
 
@@ -133,11 +140,13 @@ export default function FeaturePage() {
       )}
 
       <div className='mx-4 mt-6 flex gap-4 justify-center items-start'>
-        <div className='w-full'>
+        <div className='w-full space-y-4'>
+          {/* Text Area */}
           <TextArea
             text={text}
             setText={setText}
             onClear={handleClear}
+            onTextExtracted={handleDocumentUpload}
             isLoading={isLoading}
             isPlaying={isPlaying}
             currentText={currentText}
@@ -147,7 +156,10 @@ export default function FeaturePage() {
             enableSentenceIsolation={enableSentenceIsolation}
             letterSpacing={letterSpacing}
             lineHeight={lineHeight}
-            className='bg-white drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-2 h-[40rem] resize-none'
+            fontSize={fontSize}
+            fontFamily={fontFamily}
+            enableHighlighting={enableHighlighting}
+            className='bg-white drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-10 h-[40rem] resize-none'
           />
         </div>
         <div className='h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
@@ -166,7 +178,13 @@ export default function FeaturePage() {
             setLetterSpacing={setLetterSpacing}
             lineHeight={lineHeight}
             setLineHeight={setLineHeight}
+            fontSize={fontSize}
+            setFontSize={setFontSize}
+            fontFamily={fontFamily}
+            setFontFamily={setFontFamily}
             hasText={text.trim().length > 0}
+            enableHighlighting={enableHighlighting}
+            setEnableHighlighting={setEnableHighlighting}
             className='flex flex-col w-full bg-white'
           />
         </div>

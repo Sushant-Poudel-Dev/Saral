@@ -17,6 +17,22 @@ export const useTTS = () => {
   const utteranceRef = useRef(null);
   const wordsRef = useRef([]);
   const isStoppedRef = useRef(false);
+  const lastUpdateTimeRef = useRef(0);
+
+  // Throttled update function for better performance
+  const updateWordIndex = (wordIndex, charIndex) => {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+
+    // Throttle updates to max 20 per second for better performance
+    if (timeSinceLastUpdate < 50) {
+      return;
+    }
+
+    lastUpdateTimeRef.current = now;
+    setCurrentCharIndex(charIndex);
+    setCurrentWordIndex(wordIndex);
+  };
 
   const speak = async (text, voiceSettings = {}) => {
     if (!text.trim()) {
@@ -92,9 +108,12 @@ export const useTTS = () => {
     }
 
     try {
-      // Split text into words for tracking
+      // Split text into words for tracking - use the filtered text for TTS but original for display
       const words = text.trim().split(/\s+/);
       wordsRef.current = words;
+
+      // Store the text being spoken for accurate word boundary calculation
+      const textBeingSpoken = text;
 
       // Create speech synthesis utterance
       const utterance = new SpeechSynthesisUtterance(text);
@@ -190,14 +209,21 @@ export const useTTS = () => {
 
         if (event.name === "word") {
           const charIndex = event.charIndex;
-          const wordIndex = findWordIndexFromCharIndex(text, charIndex);
+          const wordIndex = findWordIndexFromCharIndex(
+            textBeingSpoken,
+            charIndex
+          );
 
           console.log(
             `Word boundary: charIndex=${charIndex}, wordIndex=${wordIndex}`
           );
 
-          setCurrentCharIndex(charIndex);
-          setCurrentWordIndex(wordIndex);
+          // For better accuracy with large texts, add a minimal delay to sync with speech
+          setTimeout(() => {
+            if (!isStoppedRef.current) {
+              updateWordIndex(wordIndex, charIndex);
+            }
+          }, 20); // Reduced delay for better responsiveness
         }
       };
 
@@ -362,16 +388,36 @@ export const useTTS = () => {
       setIsLoading(false);
       setIsPlaying(true);
 
-      // Calculate timing for word highlighting
-      const wordDuration = duration / words.length; // Simple equal distribution
+      // Calculate timing for word highlighting - more sophisticated approach
+      const avgWordsPerSecond = isSlowSpeed ? 2.0 : 3.5; // Typical speaking rates
+      const expectedWordsPerSecond = Math.min(
+        avgWordsPerSecond,
+        words.length / duration
+      );
+      const baseHighlightDelay = 1000 / expectedWordsPerSecond;
 
-      // Adjust timing based on speed setting
-      const speedMultiplier = isSlowSpeed ? 2 : 1; // Slower highlighting for slow speech
-      const highlightDelay = (wordDuration * 1000) / speedMultiplier;
+      // Adjust for speed settings
+      let speedMultiplier = 1;
+      if (typeof voiceSettings.speed === "number") {
+        speedMultiplier = 1 / Math.max(0.5, Math.min(2, voiceSettings.speed));
+      } else if (voiceSettings.speed === "slow") {
+        speedMultiplier = 1.5;
+      } else if (voiceSettings.speed === "fast") {
+        speedMultiplier = 0.7;
+      }
+
+      const highlightDelay = baseHighlightDelay * speedMultiplier;
+
+      console.log(
+        `Highlight timing: ${highlightDelay.toFixed(
+          0
+        )}ms per word, expected ${expectedWordsPerSecond.toFixed(1)} words/sec`
+      );
 
       // Start word highlighting simulation
       const startHighlighting = () => {
         let currentWordIdx = 0;
+        let startTime = Date.now();
 
         const highlightInterval = setInterval(() => {
           if (isStoppedRef.current || currentWordIdx >= words.length) {
@@ -379,14 +425,36 @@ export const useTTS = () => {
             return;
           }
 
-          setCurrentWordIndex(currentWordIdx);
-
-          // Calculate character index
+          // Calculate more accurate character index using regex matching
+          const textUpToCurrentWord = words.slice(0, currentWordIdx).join(" ");
           let charIndex = 0;
-          for (let i = 0; i < currentWordIdx; i++) {
-            charIndex += words[i].length + 1; // +1 for space
+
+          if (currentWordIdx > 0) {
+            // Find the actual position in the original text
+            const regex = new RegExp(
+              "\\b" +
+                words
+                  .slice(0, currentWordIdx)
+                  .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+                  .join("\\s+") +
+                "\\b"
+            );
+            const match = text.match(regex);
+            if (match) {
+              charIndex = match.index + match[0].length;
+              // Move to start of next word
+              const nextWordMatch = text.substring(charIndex).match(/\S/);
+              if (nextWordMatch) {
+                charIndex += nextWordMatch.index;
+              }
+            } else {
+              // Fallback to simple calculation
+              charIndex =
+                textUpToCurrentWord.length + (currentWordIdx > 0 ? 1 : 0);
+            }
           }
-          setCurrentCharIndex(charIndex);
+
+          updateWordIndex(currentWordIdx, charIndex);
 
           currentWordIdx++;
         }, highlightDelay);
@@ -521,21 +589,43 @@ export const useTTS = () => {
 
   // Helper function to find word index from character index
   const findWordIndexFromCharIndex = (text, charIndex) => {
-    const words = text.trim().split(/\s+/);
-    let currentCharIndex = 0;
+    // More accurate word boundary detection
+    const words = [];
+    const wordPositions = [];
+    let currentPos = 0;
 
-    for (let i = 0; i < words.length; i++) {
-      const wordStart = currentCharIndex;
-      const wordEnd = currentCharIndex + words[i].length;
+    // Use regex to find word boundaries more accurately
+    const wordMatches = text.matchAll(/\S+/g);
 
-      if (charIndex >= wordStart && charIndex < wordEnd) {
-        return i;
-      }
-
-      currentCharIndex = wordEnd + 1; // +1 for space
+    for (const match of wordMatches) {
+      words.push(match[0]);
+      wordPositions.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        index: words.length - 1,
+      });
     }
 
-    return words.length - 1; // Return last word index if not found
+    // Find which word the character index falls into
+    for (const pos of wordPositions) {
+      if (charIndex >= pos.start && charIndex < pos.end) {
+        return pos.index;
+      }
+    }
+
+    // If not found within a word, find the closest word
+    let closestIndex = 0;
+    let minDistance = Math.abs(charIndex - wordPositions[0]?.start || 0);
+
+    for (let i = 1; i < wordPositions.length; i++) {
+      const distance = Math.abs(charIndex - wordPositions[i].start);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+
+    return Math.min(closestIndex, words.length - 1);
   };
 
   const clearError = () => {
