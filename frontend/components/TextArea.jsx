@@ -534,13 +534,17 @@ export default function TextArea({
       <DocumentUpload
         onTextExtracted={onTextExtracted}
         compact={true}
-        className='absolute top-1 right-24 z-10'
+        className={`absolute top-1 ${
+          text ? "right-24" : "right-14"
+        } z-10 transition-all duration-200`}
       />
 
       {/* Definition Toggle Button - Top Right (between upload and clear) */}
       <button
         onClick={() => setDefinitionsMode((v) => !v)}
-        className={`absolute top-1 right-14 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer ${
+        className={`absolute top-1 ${
+          text ? "right-14" : "right-4"
+        } z-10 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer ${
           definitionsMode ? "bg-blue-50 border-blue-200" : ""
         }`}
         title={
@@ -580,7 +584,7 @@ export default function TextArea({
         <button
           onClick={onClear}
           disabled={isLoading}
-          className='absolute top-1 right-4 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer'
+          className='absolute top-1 right-4 z-10 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer'
           title='Clear Text'
         >
           <img

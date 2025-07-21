@@ -118,9 +118,9 @@ export default function FeaturePage() {
 
   return (
     <div>
-      <div className='text-center mt-6 mb-2'>
-        <h1>Make reading yours</h1>
-        <h2 className='mx-70 mt-1'>
+      <div className='text-center mt-4 md:mt-6 mb-2 px-4 md:px-8'>
+        <h1 className='text-2xl md:text-3xl font-bold'>Make reading yours</h1>
+        <h2 className='text-sm md:text-base mt-1 md:mt-2 max-w-3xl mx-auto'>
           Upload a document (PDF, DOC, DOCX, TXT), paste your text, or try our
           sample to begin your personalized reading experience.
         </h2>
@@ -128,7 +128,7 @@ export default function FeaturePage() {
 
       {/* Error display */}
       {error && (
-        <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 mx-auto max-w-4xl'>
+        <div className='bg-red-100 border border-red-400 text-red-700 px-3 py-2 md:px-4 md:py-3 rounded mb-3 md:mb-4 mx-auto max-w-full md:max-w-4xl text-sm md:text-base'>
           <span>{error}</span>
           <button
             onClick={clearError}
@@ -139,7 +139,7 @@ export default function FeaturePage() {
         </div>
       )}
 
-      <div className='mx-4 mt-6 flex gap-4 justify-center items-start'>
+      <div className='mx-4 mt-6 flex flex-col md:flex-row gap-4 justify-center items-start'>
         <div className='w-full space-y-4'>
           {/* Text Area */}
           <TextArea
@@ -159,10 +159,10 @@ export default function FeaturePage() {
             fontSize={fontSize}
             fontFamily={fontFamily}
             enableHighlighting={enableHighlighting}
-            className='bg-white drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-10 h-[40rem] resize-none'
+            className='bg-white drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-10 !h-[40rem] resize-none'
           />
         </div>
-        <div className='h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
+        <div className='w-full md:w-auto h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
           <TTSControls
             onSubmit={handleTextSubmit}
             onStop={stop}

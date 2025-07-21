@@ -11,7 +11,7 @@ export default function Navbar() {
           <span>SARAL</span>
         </div>
         <div className='flex items-center justify-between w-full'>
-          <ul className='flex space-x-30 item-center'>
+          <ul className='hidden md:flex space-x-30 item-center'>
             <li className='text-lg'>
               <Link href='/'>Home</Link>
             </li>
@@ -19,7 +19,10 @@ export default function Navbar() {
               <Link href='/feature'>Feature</Link>
             </li>
           </ul>
-          <Button text='Saral Now' />
+          <Button
+            text='Saral Now'
+            className='whitespace-nowrap min-w-[120px]'
+          />
         </div>
       </div>
     </>

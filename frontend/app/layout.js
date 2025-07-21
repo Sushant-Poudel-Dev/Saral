@@ -50,7 +50,9 @@ export default function RootLayout({ children }) {
       >
         <Navbar />
         {children}
-        <Footer />
+        <div className='hidden md:block'>
+          <Footer />
+        </div>
       </body>
     </html>
   );
