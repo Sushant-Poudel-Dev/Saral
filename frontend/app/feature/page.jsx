@@ -30,6 +30,10 @@ export default function FeaturePage() {
   const [fontSize, setFontSize] = useState(16);
   const [fontFamily, setFontFamily] = useState("var(--font-lexend)");
   const [enableHighlighting, setEnableHighlighting] = useState(false);
+  const [enableColorCoding, setEnableColorCoding] = useState(false);
+  const [colorCodedLetters, setColorCodedLetters] = useState([]);
+  const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+  const [backgroundTexture, setBackgroundTexture] = useState("none");
 
   const availableSpeeds = [
     { value: "slow", name: "Slow", rate: 0.5 },
@@ -159,7 +163,11 @@ export default function FeaturePage() {
             fontSize={fontSize}
             fontFamily={fontFamily}
             enableHighlighting={enableHighlighting}
-            className='bg-white drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-10 !h-[40rem] resize-none'
+            enableColorCoding={enableColorCoding}
+            colorCodedLetters={colorCodedLetters}
+            backgroundColor={backgroundColor}
+            backgroundTexture={backgroundTexture}
+            className='drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-10 !h-[40rem] resize-none'
           />
         </div>
         <div className='w-full md:w-auto h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
@@ -185,6 +193,14 @@ export default function FeaturePage() {
             hasText={text.trim().length > 0}
             enableHighlighting={enableHighlighting}
             setEnableHighlighting={setEnableHighlighting}
+            enableColorCoding={enableColorCoding}
+            setEnableColorCoding={setEnableColorCoding}
+            colorCodedLetters={colorCodedLetters}
+            setColorCodedLetters={setColorCodedLetters}
+            backgroundColor={backgroundColor}
+            setBackgroundColor={setBackgroundColor}
+            backgroundTexture={backgroundTexture}
+            setBackgroundTexture={setBackgroundTexture}
             className='flex flex-col w-full bg-white'
           />
         </div>

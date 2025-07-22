@@ -1,15 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Play from "@/media/Play.svg";
-import Stop from "@/media/Stop.svg";
-import ArrowDown from "@/media/ArrowDown.svg";
-import Speed from "@/media/Speed.svg";
+import CollapseButton from "@/media/CollapseButton.svg";
 import Volume from "@/media/Volume.svg";
 import Rular from "@/media/Rular.svg";
 import Paint from "@/media/Paint.svg";
-import Hamburger from "@/media/Hamburger.svg";
-import CollapseButton from "@/media/CollapseButton.svg";
+import TTSSection from "@/components/controls/TTSSection";
+import TypographySection from "@/components/controls/TypographySection";
+import ColorsSection from "@/components/controls/ColorsSection";
 
 export default function TTSControls({
   onSubmit,
@@ -34,60 +32,50 @@ export default function TTSControls({
   className = "",
   enableHighlighting = false,
   setEnableHighlighting,
+  enableColorCoding = false,
+  setEnableColorCoding,
+  colorCodedLetters = [],
+  setColorCodedLetters,
+  backgroundColor = "#ffffff",
+  setBackgroundColor,
+  backgroundTexture = "none",
+  setBackgroundTexture,
 }) {
-  // State for collapsible sections
-  const [isTTSExpanded, setIsTTSExpanded] = useState(true);
-  const [isTypographyExpanded, setIsTypographyExpanded] = useState(true);
-  const [isColorsExpanded, setIsColorsExpanded] = useState(true);
+  // State for collapsed view
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // State for font family
-  const [localFontFamily, setLocalFontFamily] = useState(
-    fontFamily || "var(--font-lexend)"
-  );
+  // Local background color state if not provided via props
+  const [localBackgroundColor, setLocalBackgroundColor] =
+    useState(backgroundColor);
+  // Local texture state if not provided via props
+  const [localBackgroundTexture, setLocalBackgroundTexture] =
+    useState(backgroundTexture);
 
-  // Use prop setter or local setter for font family
-  const handleFontFamilyChange = (value) => {
-    if (setFontFamily) {
-      setFontFamily(value);
+  // Use either the prop setter or local setter for color
+  const handleBackgroundColorChange = (value) => {
+    if (setBackgroundColor) {
+      setBackgroundColor(value);
     } else {
-      setLocalFontFamily(value);
+      setLocalBackgroundColor(value);
     }
   };
 
-  // Display font family from props if available, otherwise from local state
-  const displayFontFamily = setFontFamily ? fontFamily : localFontFamily;
-
-  // State for subheadings
-  const [subheadingState, setSubheadingState] = useState({
-    focus: true,
-    highlight: true,
-    text: true,
-    spacing: true,
-  });
-
-  // Toggle subheading expansion
-  const toggleSubheading = (section) => {
-    setSubheadingState((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
-
-  // Local font size state if not provided via props
-  const [localFontSize, setLocalFontSize] = useState(fontSize);
-
-  // Use either the prop setter or local setter
-  const handleFontSizeChange = (value) => {
-    if (setFontSize) {
-      setFontSize(value);
+  // Use either the prop setter or local setter for texture
+  const handleBackgroundTextureChange = (value) => {
+    if (setBackgroundTexture) {
+      setBackgroundTexture(value);
     } else {
-      setLocalFontSize(value);
+      setLocalBackgroundTexture(value);
     }
   };
 
-  // Display font size from props if available, otherwise from local state
-  const displayFontSize = setFontSize ? fontSize : localFontSize;
+  // Display background color/texture from props if available, otherwise from local state
+  const displayBackgroundColor = setBackgroundColor
+    ? backgroundColor
+    : localBackgroundColor;
+  const displayBackgroundTexture = setBackgroundTexture
+    ? backgroundTexture
+    : localBackgroundTexture;
 
   // Add custom styles for select options
   useEffect(() => {
@@ -132,12 +120,6 @@ export default function TTSControls({
     }
   }, []);
 
-  const availableSpeeds = [
-    { value: "slow", name: "Slow", rate: 0.5 },
-    { value: "normal", name: "Normal", rate: 1 },
-    { value: "fast", name: "Fast", rate: 1.5 },
-  ];
-
   return (
     <div
       className={`${className} rounded-2xl transition-all duration-300 ease-in-out overflow-hidden ${
@@ -160,10 +142,7 @@ export default function TTSControls({
           </button>
 
           <button
-            onClick={() => {
-              setIsCollapsed(false);
-              setIsTTSExpanded(true);
-            }}
+            onClick={() => setIsCollapsed(false)}
             className='backdrop-blur-md border border-slate-200/80 rounded-xl p-3 transition-all duration-300 cursor-pointer flex items-center justify-center hover:border-slate-300'
             title='Text-to-Speech'
           >
@@ -175,10 +154,7 @@ export default function TTSControls({
           </button>
 
           <button
-            onClick={() => {
-              setIsCollapsed(false);
-              setIsTypographyExpanded(true);
-            }}
+            onClick={() => setIsCollapsed(false)}
             className='backdrop-blur-md border border-slate-200/80 rounded-xl p-3 transition-all duration-300 cursor-pointer flex items-center justify-center hover:border-slate-300'
             title='Typography'
           >
@@ -190,10 +166,7 @@ export default function TTSControls({
           </button>
 
           <button
-            onClick={() => {
-              setIsCollapsed(false);
-              setIsColorsExpanded(true);
-            }}
+            onClick={() => setIsCollapsed(false)}
             className='backdrop-blur-md border border-slate-200/80 rounded-xl p-3 transition-all duration-300 cursor-pointer flex items-center justify-center hover:border-slate-300'
             title='Colors'
           >
@@ -266,574 +239,49 @@ export default function TTSControls({
                 padding-right: 2rem;
               }
             `}</style>
-            {/* Section 1: Text-to-Speech */}
-            <div className='backdrop-blur-md border border-slate-200/80 rounded-xl transition-all duration-200 hover:border-slate-300'>
-              <button
-                onClick={() => setIsTTSExpanded(!isTTSExpanded)}
-                className='rounded-t-xl w-full p-4 flex justify-between items-center hover:cursor-pointer transition-all duration-200'
-              >
-                <div className='flex items-center gap-3'>
-                  <img
-                    src={Volume.src}
-                    alt='TTS'
-                    className='w-5 h-5'
-                  />
-                  <h3 className='text-lg font-semibold text-slate-800'>
-                    Text-to-Speech
-                  </h3>
-                </div>
-                <img
-                  src={ArrowDown.src}
-                  alt='Arrow Down'
-                  className={`w-4 h-4 transform transition-transform duration-200 ${
-                    isTTSExpanded ? "rotate-180" : "rotate-0"
-                  }`}
-                />
-              </button>
 
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  isTTSExpanded ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className='p-4 pt-0'>
-                  {/* Single Play/Stop Button - Full Width */}
-                  <div className='mb-4'>
-                    {!isPlaying ? (
-                      <button
-                        type='submit'
-                        onClick={onSubmit}
-                        disabled={isLoading || !hasText}
-                        className='w-full bg-slate-100 hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg p-2 transition-all duration-200 flex items-center justify-center gap-2 border border-slate-200 hover:border-slate-300'
-                      >
-                        {isLoading ? (
-                          <>
-                            <span className='animate-spin text-sm'>⏳</span>
-                            <span className='text-slate-700 text-sm'>
-                              Processing...
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <img
-                              src={Play.src}
-                              alt='Play'
-                              className='w-4 h-4'
-                            />
-                            <span className='text-slate-700 text-sm font-medium'>
-                              Play
-                            </span>
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <button
-                        type='button'
-                        onClick={onStop}
-                        className='w-full bg-slate-100 hover:bg-slate-200 rounded-lg p-2 transition-all duration-200 flex items-center justify-center gap-2 border border-slate-200 hover:border-slate-300'
-                      >
-                        <img
-                          src={Stop.src}
-                          alt='Stop'
-                          className='w-4 h-4'
-                        />
-                        <span className='text-slate-700 text-sm font-medium'>
-                          Stop
-                        </span>
-                      </button>
-                    )}
-                  </div>
+            {/* Text-to-Speech Section */}
+            <TTSSection
+              onSubmit={onSubmit}
+              onStop={onStop}
+              isLoading={isLoading}
+              isPlaying={isPlaying}
+              speed={speed}
+              setSpeed={setSpeed}
+              enableParagraphIsolation={enableParagraphIsolation}
+              setEnableParagraphIsolation={setEnableParagraphIsolation}
+              enableSentenceIsolation={enableSentenceIsolation}
+              setEnableSentenceIsolation={setEnableSentenceIsolation}
+              enableHighlighting={enableHighlighting}
+              setEnableHighlighting={setEnableHighlighting}
+              hasText={hasText}
+            />
 
-                  {/* Speed Control */}
-                  <div className='mb-4'>
-                    <div className='flex justify-between items-center mb-2'>
-                      <label className='text-sm font-medium text-gray-700'>
-                        Speed
-                      </label>
-                      <span className='text-sm text-gray-600 font-medium'>
-                        {speed === "slow"
-                          ? "Slow"
-                          : speed === "normal"
-                          ? "Normal"
-                          : "Fast"}
-                      </span>
-                    </div>
-                    <div className='relative'>
-                      <input
-                        type='range'
-                        min='0'
-                        max='2'
-                        step='1'
-                        value={
-                          speed === "slow" ? 0 : speed === "normal" ? 1 : 2
-                        }
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          setSpeed(
-                            value === 0
-                              ? "slow"
-                              : value === 1
-                              ? "normal"
-                              : "fast"
-                          );
-                        }}
-                        disabled={isLoading}
-                        className='w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider'
-                      />
-                      {/* Range indicators */}
-                      <div className='flex justify-between text-xs text-gray-500 mt-1'>
-                        <span>Slow</span>
-                        <span>Normal</span>
-                        <span>Fast</span>
-                      </div>
-                    </div>
-                  </div>
+            {/* Typography Section */}
+            <TypographySection
+              isLoading={isLoading}
+              letterSpacing={letterSpacing}
+              setLetterSpacing={setLetterSpacing}
+              lineHeight={lineHeight}
+              setLineHeight={setLineHeight}
+              fontSize={fontSize}
+              setFontSize={setFontSize}
+              fontFamily={fontFamily}
+              setFontFamily={setFontFamily}
+            />
 
-                  {/* Focus Section */}
-                  <div className='mb-4'>
-                    <div
-                      className='flex justify-between items-center mb-2 cursor-pointer'
-                      onClick={() => toggleSubheading("focus")}
-                    >
-                      <h4 className='text-sm font-semibold text-slate-700'>
-                        Focus
-                      </h4>
-                      <img
-                        src={ArrowDown.src}
-                        alt='Toggle'
-                        className={`w-3 h-3 transform transition-transform duration-200 ${
-                          subheadingState.focus ? "rotate-180" : "rotate-0"
-                        }`}
-                      />
-                    </div>
-                    <div
-                      className={`space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
-                        subheadingState.focus
-                          ? "max-h-40 opacity-100"
-                          : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      {/* Paragraph Toggle */}
-                      <div className='flex items-center justify-between'>
-                        <span className='text-sm text-gray-700'>Paragraph</span>
-                        <label className='relative inline-flex items-center cursor-pointer'>
-                          <input
-                            type='checkbox'
-                            checked={enableParagraphIsolation}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setEnableParagraphIsolation(true);
-                                setEnableSentenceIsolation(false);
-                              } else {
-                                setEnableParagraphIsolation(false);
-                              }
-                            }}
-                            disabled={isLoading}
-                            className='sr-only'
-                          />
-                          <div
-                            className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                              enableParagraphIsolation
-                                ? "bg-slate-600"
-                                : "bg-gray-300"
-                            }`}
-                          >
-                            <div
-                              className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 mt-0.5 ${
-                                enableParagraphIsolation
-                                  ? "translate-x-5 ml-0.5"
-                                  : "translate-x-0.5"
-                              }`}
-                            ></div>
-                          </div>
-                        </label>
-                      </div>
-
-                      {/* Sentence Toggle */}
-                      <div className='flex items-center justify-between'>
-                        <span className='text-sm text-gray-700'>Sentence</span>
-                        <label className='relative inline-flex items-center cursor-pointer'>
-                          <input
-                            type='checkbox'
-                            checked={enableSentenceIsolation}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setEnableSentenceIsolation(true);
-                                setEnableParagraphIsolation(false);
-                              } else {
-                                setEnableSentenceIsolation(false);
-                              }
-                            }}
-                            disabled={isLoading}
-                            className='sr-only'
-                          />
-                          <div
-                            className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                              enableSentenceIsolation
-                                ? "bg-slate-600"
-                                : "bg-gray-300"
-                            }`}
-                          >
-                            <div
-                              className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 mt-0.5 ${
-                                enableSentenceIsolation
-                                  ? "translate-x-5 ml-0.5"
-                                  : "translate-x-0.5"
-                              }`}
-                            ></div>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Highlight Section */}
-                  <div className='mb-4'>
-                    <div
-                      className='flex justify-between items-center mb-2 cursor-pointer'
-                      onClick={() => toggleSubheading("highlight")}
-                    >
-                      <h4 className='text-sm font-semibold text-slate-700'>
-                        Highlight
-                      </h4>
-                      <img
-                        src={ArrowDown.src}
-                        alt='Toggle'
-                        className={`w-3 h-3 transform transition-transform duration-200 ${
-                          subheadingState.highlight ? "rotate-180" : "rotate-0"
-                        }`}
-                      />
-                    </div>
-                    <div
-                      className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                        subheadingState.highlight
-                          ? "max-h-20 opacity-100"
-                          : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      <div className='flex items-center justify-between'>
-                        <span className='text-sm text-gray-700'>
-                          Enable Text Highlighting
-                        </span>
-                        <label className='relative inline-flex items-center cursor-pointer'>
-                          <input
-                            type='checkbox'
-                            checked={enableHighlighting}
-                            onChange={(e) =>
-                              setEnableHighlighting &&
-                              setEnableHighlighting(e.target.checked)
-                            }
-                            disabled={isLoading}
-                            className='sr-only'
-                          />
-                          <div
-                            className={`w-11 h-6 rounded-full transition-colors duration-200 ${
-                              enableHighlighting
-                                ? "bg-slate-600"
-                                : "bg-gray-300"
-                            }`}
-                          >
-                            <div
-                              className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 mt-0.5 ${
-                                enableHighlighting
-                                  ? "translate-x-5 ml-0.5"
-                                  : "translate-x-0.5"
-                              }`}
-                            ></div>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 2: Typography */}
-            <div className='backdrop-blur-md border border-slate-200/80 rounded-xl transition-all duration-200 hover:border-slate-300'>
-              <button
-                onClick={() => setIsTypographyExpanded(!isTypographyExpanded)}
-                className='rounded-t-xl w-full p-4 flex justify-between hover:cursor-pointer items-center transition-all duration-200'
-              >
-                <div className='flex items-center gap-3'>
-                  <img
-                    src={Rular.src}
-                    alt='Typography'
-                    className='w-5 h-5'
-                  />
-                  <h3 className='text-lg font-semibold text-slate-800'>
-                    Typography
-                  </h3>
-                </div>
-                <img
-                  src={ArrowDown.src}
-                  alt='Arrow Down'
-                  className={`w-4 h-4 transform transition-transform duration-200 ${
-                    isTypographyExpanded ? "rotate-180" : "rotate-0"
-                  }`}
-                />
-              </button>
-
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  isTypographyExpanded
-                    ? "max-h-96 opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className='p-4 pt-0'>
-                  {/* Text Section */}
-                  <div className='mb-4'>
-                    <div
-                      className='flex justify-between items-center mb-2 cursor-pointer'
-                      onClick={() => toggleSubheading("text")}
-                    >
-                      <h4 className='text-sm font-semibold text-slate-700'>
-                        Text
-                      </h4>
-                      <img
-                        src={ArrowDown.src}
-                        alt='Toggle'
-                        className={`w-3 h-3 transform transition-transform duration-200 ${
-                          subheadingState.text ? "rotate-180" : "rotate-0"
-                        }`}
-                      />
-                    </div>
-                    <div
-                      className={`space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
-                        subheadingState.text
-                          ? "max-h-40 opacity-100"
-                          : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      {/* Font Size Control */}
-                      <div>
-                        <div className='flex justify-between items-center mb-2'>
-                          <label className='text-sm font-medium text-gray-700'>
-                            Font Size
-                          </label>
-                          <span className='text-sm text-gray-600 font-medium'>
-                            {displayFontSize}px
-                          </span>
-                        </div>
-                        <input
-                          type='range'
-                          min='12'
-                          max='24'
-                          step='1'
-                          value={displayFontSize}
-                          onChange={(e) =>
-                            handleFontSizeChange(parseInt(e.target.value))
-                          }
-                          disabled={isLoading}
-                          className='w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider'
-                        />
-                      </div>
-
-                      {/* Font Family Selector */}
-                      <div>
-                        <div className='flex justify-between items-center mb-2'>
-                          <label className='text-sm font-medium text-gray-700'>
-                            Font Family
-                          </label>
-                        </div>
-                        <select
-                          value={displayFontFamily}
-                          onChange={(e) =>
-                            handleFontFamilyChange(e.target.value)
-                          }
-                          className='w-full p-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-200 focus:border-gray-300 transition-all duration-200'
-                          disabled={isLoading}
-                          style={{ fontFamily: displayFontFamily }}
-                        >
-                          <option
-                            value='var(--font-lexend)'
-                            style={{ fontFamily: "var(--font-lexend)" }}
-                          >
-                            Lexend
-                          </option>
-                          <option
-                            value='var(--font-inter)'
-                            style={{ fontFamily: "var(--font-inter)" }}
-                          >
-                            Inter
-                          </option>
-                          <option
-                            value='var(--font-roboto)'
-                            style={{ fontFamily: "var(--font-roboto)" }}
-                          >
-                            Roboto
-                          </option>
-                          <option
-                            value='var(--font-montserrat)'
-                            style={{ fontFamily: "var(--font-montserrat)" }}
-                          >
-                            Montserrat
-                          </option>
-                          <option
-                            value='system-ui'
-                            style={{ fontFamily: "system-ui" }}
-                          >
-                            System UI
-                          </option>
-                          <option
-                            value='Arial'
-                            style={{ fontFamily: "Arial" }}
-                          >
-                            Arial
-                          </option>
-                          <option
-                            value='Verdana'
-                            style={{ fontFamily: "Verdana" }}
-                          >
-                            Verdana
-                          </option>
-                          <option
-                            value='Helvetica'
-                            style={{ fontFamily: "Helvetica" }}
-                          >
-                            Helvetica
-                          </option>
-                          <option
-                            value='Times New Roman'
-                            style={{ fontFamily: '"Times New Roman"' }}
-                          >
-                            Times New Roman
-                          </option>
-                          <option
-                            value='Georgia'
-                            style={{ fontFamily: "Georgia" }}
-                          >
-                            Georgia
-                          </option>
-                          <option
-                            value='Courier New'
-                            style={{ fontFamily: '"Courier New"' }}
-                          >
-                            Courier New
-                          </option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Spacing Section */}
-                  <div className='mb-4'>
-                    <div
-                      className='flex justify-between items-center mb-2 cursor-pointer'
-                      onClick={() => toggleSubheading("spacing")}
-                    >
-                      <h4 className='text-sm font-semibold text-slate-700'>
-                        Spacing
-                      </h4>
-                      <img
-                        src={ArrowDown.src}
-                        alt='Toggle'
-                        className={`w-3 h-3 transform transition-transform duration-200 ${
-                          subheadingState.spacing ? "rotate-180" : "rotate-0"
-                        }`}
-                      />
-                    </div>
-                    <div
-                      className={`space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
-                        subheadingState.spacing
-                          ? "max-h-60 opacity-100"
-                          : "max-h-0 opacity-0"
-                      }`}
-                    >
-                      {/* Letter Spacing Control */}
-                      <div>
-                        <div className='flex justify-between items-center mb-2'>
-                          <label className='text-sm font-medium text-gray-700'>
-                            Letter Spacing
-                          </label>
-                          <span className='text-sm text-gray-600 font-medium'>
-                            {letterSpacing > 0 ? "+" : ""}
-                            {letterSpacing.toFixed(2)}em
-                          </span>
-                        </div>
-                        <input
-                          type='range'
-                          min='-0.1'
-                          max='0.2'
-                          step='0.01'
-                          value={letterSpacing}
-                          onChange={(e) =>
-                            setLetterSpacing(parseFloat(e.target.value))
-                          }
-                          disabled={isLoading}
-                          className='w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider'
-                        />
-                      </div>
-
-                      {/* Line Height Control */}
-                      <div>
-                        <div className='flex justify-between items-center mb-2'>
-                          <label className='text-sm font-medium text-gray-700'>
-                            Line Height
-                          </label>
-                          <span className='text-sm text-gray-600 font-medium'>
-                            {lineHeight.toFixed(1)}
-                          </span>
-                        </div>
-                        <input
-                          type='range'
-                          min='1'
-                          max='3'
-                          step='0.1'
-                          value={lineHeight}
-                          onChange={(e) =>
-                            setLineHeight(parseFloat(e.target.value))
-                          }
-                          disabled={isLoading}
-                          className='w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider'
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Section 3: Colors */}
-            <div className='backdrop-blur-md border border-slate-200/80 rounded-xl transition-all duration-200 hover:border-slate-300'>
-              <button
-                onClick={() => setIsColorsExpanded(!isColorsExpanded)}
-                className='rounded-t-xl w-full p-4 flex justify-between hover:cursor-pointer items-center transition-all duration-200'
-              >
-                <div className='flex items-center gap-3'>
-                  <img
-                    src={Paint.src}
-                    alt='Colors'
-                    className='w-5 h-5'
-                  />
-                  <h3 className='text-lg font-semibold text-slate-800'>
-                    Colors
-                  </h3>
-                </div>
-                <img
-                  src={ArrowDown.src}
-                  alt='Arrow Down'
-                  className={`w-4 h-4 transform transition-transform duration-200 ${
-                    isColorsExpanded ? "rotate-180" : "rotate-0"
-                  }`}
-                />
-              </button>
-
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  isColorsExpanded
-                    ? "max-h-20 opacity-100"
-                    : "max-h-0 opacity-0"
-                }`}
-              >
-                <div className='p-4 pt-0'>
-                  <div className='text-center text-slate-500 text-sm'>
-                    Coming soon...
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Colors & Texture Section */}
+            <ColorsSection
+              isLoading={isLoading}
+              enableColorCoding={enableColorCoding}
+              setEnableColorCoding={setEnableColorCoding}
+              colorCodedLetters={colorCodedLetters}
+              setColorCodedLetters={setColorCodedLetters}
+              backgroundColor={displayBackgroundColor}
+              setBackgroundColor={handleBackgroundColorChange}
+              backgroundTexture={displayBackgroundTexture}
+              setBackgroundTexture={handleBackgroundTextureChange}
+            />
           </div>
         </div>
       )}

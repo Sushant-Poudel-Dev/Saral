@@ -25,6 +25,10 @@ export default function TextArea({
   language = "en", // Add language prop
   className = "", // Add className prop
   enableHighlighting = false, // Add highlighting toggle prop
+  enableColorCoding = false, // Add color coding toggle prop
+  colorCodedLetters = [], // Add color coded letters array
+  backgroundColor = "#ffffff", // Add background color prop
+  backgroundTexture = "none", // Add background texture prop
 }) {
   // Definitions mode toggle
   const [definitionsMode, setDefinitionsMode] = useState(false);
@@ -36,6 +40,12 @@ export default function TextArea({
     paragraphs: [],
     sentences: [],
   });
+
+  // For lined background scroll sync in both modes
+  const [normalScrollTop, setNormalScrollTop] = useState(0);
+  const textareaRef = useRef(null);
+  const [readingScrollTop, setReadingScrollTop] = useState(0);
+  const readingContainerRef = useRef(null);
 
   // Pre-calculate text structure when text changes
   const textStructure = useMemo(() => {
@@ -339,24 +349,217 @@ export default function TextArea({
     handleWordLeave();
   };
 
+  // Function to determine if a character should be color-coded
+  const getColorForLetter = (letter) => {
+    if (!enableColorCoding || colorCodedLetters.length === 0) return null;
+
+    // Check English letters
+    const englishConfusions = colorCodedLetters.filter(
+      (item) => !item.startsWith("dev-")
+    );
+    for (const confusion of englishConfusions) {
+      if (confusion.includes(letter.toLowerCase())) {
+        return {
+          bg: "#FECACA", // red-200
+          text: "#9B2C2C", // red-800
+        };
+      }
+    }
+
+    // Check Devanagari consonants
+    const devanagariMap = {
+      "dev-bv": ["ब", "व"],
+      "dev-np": ["ण", "प"],
+      "dev-ghd": ["घ", "ध"],
+      "dev-nda": ["न", "द", "अ"],
+      "dev-np2": ["न", "प"],
+      "dev-gg": ["ग", "घ"],
+      "dev-dhb": ["ढ", "भ"],
+      "dev-dhd": ["ध", "द"],
+      "dev-pb": ["फ", "ब"],
+      "dev-pp": ["प", "फ"],
+      "dev-cc": ["च", "छ"],
+      "dev-cj": ["च", "ज"],
+      "dev-tt": ["ट", "ठ"],
+      "dev-cj2": ["छ", "झ"],
+      "dev-kk": ["क", "ख"],
+      "dev-kg": ["क", "घ"],
+      "dev-ss": ["ष", "श"],
+      "dev-ss2": ["ष", "स"],
+      "dev-dd": ["द", "ड"],
+      "dev-yg": ["य", "ग"],
+      "dev-jj": ["ज", "झ"],
+      "dev-ng": ["न", "ग"],
+      "dev-rn": ["र", "ङ"],
+      "dev-nm": ["न", "म"],
+      "dev-ms": ["म", "स"],
+    };
+
+    const devConsonants = colorCodedLetters.filter(
+      (item) => item.startsWith("dev-") && !item.startsWith("dev-v-")
+    );
+    for (const confusion of devConsonants) {
+      if (
+        devanagariMap[confusion] &&
+        devanagariMap[confusion].includes(letter)
+      ) {
+        return {
+          bg: "#E9D8FD", // purple-200
+          text: "#553C9A", // purple-800
+        };
+      }
+    }
+
+    // Check Devanagari vowels
+    const devanagariVowelMap = {
+      "dev-v-ii": ["इ", "ई"],
+      "dev-v-uu": ["उ", "ऊ"],
+      "dev-v-oo": ["ओ", "औ"],
+      "dev-v-ee": ["ए", "ऐ"],
+      "dev-v-ri": ["ऋ", "रि"],
+      "dev-v-aha": ["अं", "अः"],
+      "dev-v-aa": ["अ", "आ", "अः"],
+    };
+
+    const devVowels = colorCodedLetters.filter((item) =>
+      item.startsWith("dev-v-")
+    );
+    for (const confusion of devVowels) {
+      const key = confusion.replace("dev-v-", "dev-v-");
+      if (devanagariVowelMap[key] && devanagariVowelMap[key].includes(letter)) {
+        return {
+          bg: "#BEE3F8", // blue-200
+          text: "#2A4365", // blue-800
+        };
+      }
+    }
+
+    return null;
+  };
+
+  // Function to apply color coding to a word
+  const applyColorCoding = (word) => {
+    if (!enableColorCoding || colorCodedLetters.length === 0) return word;
+
+    const coloredChars = [];
+    for (let i = 0; i < word.length; i++) {
+      const char = word[i];
+      const color = getColorForLetter(char);
+
+      if (color) {
+        coloredChars.push(
+          <span
+            key={i}
+            style={{
+              backgroundColor: color.bg,
+              color: color.text,
+              fontWeight: "bold",
+              borderRadius: "2px",
+              padding: "0 1px",
+            }}
+          >
+            {char}
+          </span>
+        );
+      } else {
+        coloredChars.push(char);
+      }
+    }
+
+    return coloredChars;
+  };
+
   // Function to render normal mode (editable textarea, no hover definitions)
   const renderNormalMode = () => {
+    // Calculate number of lines for lined texture
+    const lineHeightPx =
+      typeof lineHeight === "number"
+        ? fontSize * lineHeight
+        : fontSize * parseFloat(lineHeight);
+    // Calculate scrollable content height for textarea
+    const getContentHeight = () => {
+      if (textareaRef.current) {
+        return textareaRef.current.scrollHeight;
+      }
+      return 640; // fallback to default
+    };
+    const contentHeight = getContentHeight();
+    const numLines = Math.floor(contentHeight / lineHeightPx);
+
+    // ...existing code...
+    const handleTextareaScroll = (e) => {
+      setNormalScrollTop(e.target.scrollTop);
+    };
+
+    const renderLinedBackground = () => {
+      if (backgroundTexture !== "lined") return null;
+      return (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: -normalScrollTop,
+            width: "100%",
+            height: `${contentHeight}px`,
+            minHeight: "100%",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        >
+          {Array.from({ length: numLines }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: `${i * lineHeightPx + 10}px`,
+                height: "1px",
+                background: "#bbb",
+                opacity: 0.7,
+              }}
+            />
+          ))}
+        </div>
+      );
+    };
+
     return (
-      <textarea
-        id='textInput'
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder='Type something here...'
-        className={`text-lg ${className}`}
+      <div
         style={{
-          lineHeight: getLineHeightValue(),
-          letterSpacing: getLetterSpacingValue(),
-          fontSize: `${fontSize}px`,
-          fontFamily: fontFamily,
+          position: "relative",
+          width: "100%",
+          height: "40rem", // fixed height for lined background
+          backgroundColor: backgroundColor,
+          overflow: "hidden",
+          boxShadow:
+            "0 2px 8px 0 rgba(0,0,0,0.10), 0 1.5px 4px 0 rgba(0,0,0,0.08)", // match reading mode drop shadow
+          borderRadius: "0.75rem", // match reading mode border radius
         }}
-        rows='4'
-        disabled={isLoading}
-      />
+      >
+        {renderLinedBackground()}
+        <textarea
+          ref={textareaRef}
+          id='textInput'
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onScroll={handleTextareaScroll}
+          placeholder='Type something here...'
+          className={`text-lg w-full h-full ${className}`}
+          style={{
+            lineHeight: getLineHeightValue(),
+            letterSpacing: getLetterSpacingValue(),
+            fontSize: `${fontSize}px`,
+            fontFamily: fontFamily,
+            background: "transparent",
+            position: "relative",
+            zIndex: 1,
+            borderRadius: "0.75rem", // match reading mode border radius
+          }}
+          rows='4'
+          disabled={isLoading}
+        />
+      </div>
     );
   };
 
@@ -365,7 +568,18 @@ export default function TextArea({
     const textToUse = isPlaying && currentText ? currentText : text;
 
     if (!textToUse) {
-      return null;
+      return (
+        <div
+          className={`overflow-auto h-full w-full ${className}`}
+          style={{
+            lineHeight: getLineHeightValue(),
+            letterSpacing: getLetterSpacingValue(),
+            fontSize: `${fontSize}px`,
+            fontFamily: fontFamily,
+            backgroundColor: backgroundColor,
+          }}
+        ></div>
+      );
     }
 
     // Always preserve the original text structure using character-by-character processing
@@ -422,7 +636,7 @@ export default function TextArea({
             }
             onMouseLeave={shouldEnableHover ? handleWordLeave : undefined}
           >
-            {word}
+            {enableColorCoding ? applyColorCoding(word) : word}
           </span>
         );
 
@@ -447,19 +661,86 @@ export default function TextArea({
       }
     }
 
+    // Calculate number of lines for lined texture
+    const lineHeightPx =
+      typeof lineHeight === "number"
+        ? fontSize * lineHeight
+        : fontSize * parseFloat(lineHeight);
+    // Calculate scrollable content height for reading mode
+    const getContentHeight = () => {
+      if (readingContainerRef.current) {
+        return readingContainerRef.current.scrollHeight;
+      }
+      return 640; // fallback to default
+    };
+    const contentHeight = getContentHeight();
+    const numLines = Math.floor(contentHeight / lineHeightPx);
+
+    // ...existing code...
+    const handleScroll = (e) => {
+      setReadingScrollTop(e.target.scrollTop);
+    };
+
+    const renderLinedBackground = () => {
+      if (backgroundTexture !== "lined") return null;
+      return (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: -readingScrollTop,
+            width: "100%",
+            height: `${contentHeight}px`,
+            minHeight: "100%",
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        >
+          {Array.from({ length: numLines }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                left: 0,
+                right: 0,
+                top: `${i * lineHeightPx + 10}px`,
+                height: "1px",
+                background: "#bbb",
+                opacity: 0.7,
+              }}
+            />
+          ))}
+        </div>
+      );
+    };
+
     return (
       <div
-        className={`text-lg overflow-auto ${className}`}
+        ref={readingContainerRef}
+        className={`text-lg overflow-auto w-full h-full ${className}`}
         style={{
-          resize: "none",
-          fontFamily: fontFamily,
-          fontSize: `${fontSize}px`,
-          lineHeight: getLineHeightValue(),
-          letterSpacing: getLetterSpacingValue(), // Add letter spacing
-          whiteSpace: "pre-wrap", // Preserve all whitespace and line breaks
+          position: "relative",
+          width: "100%",
+          height: "40rem", // fixed height for lined background
+          backgroundColor: backgroundColor,
+          overflow: "auto",
         }}
+        onScroll={handleScroll}
       >
-        {textParts}
+        {renderLinedBackground()}
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            fontFamily: fontFamily,
+            fontSize: `${fontSize}px`,
+            lineHeight: getLineHeightValue(),
+            letterSpacing: getLetterSpacingValue(),
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {textParts}
+        </div>
       </div>
     );
   };
