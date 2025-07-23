@@ -10,6 +10,7 @@ import TypographySection from "@/components/controls/TypographySection";
 import ColorsSection from "@/components/controls/ColorsSection";
 
 export default function TTSControls({
+  text,
   onSubmit,
   onStop,
   isLoading = false,
@@ -119,6 +120,18 @@ export default function TTSControls({
       };
     }
   }, []);
+
+  const strokeWidth = 1;
+  const lineHeightValue = fontSize * lineHeight;
+  const lineY = lineHeightValue - strokeWidth / 2;
+
+  const svgPattern = encodeURIComponent(
+    `<svg width="10" height="${lineHeightValue}" xmlns="http://www.w3.org/2000/svg">
+     <path d="M0 ${lineY} L10 ${lineY}" stroke="%23ccc" stroke-width="${strokeWidth}" />
+   </svg>`
+  );
+
+  const dynamicBackgroundTexture = `data:image/svg+xml,${svgPattern}`;
 
   return (
     <div

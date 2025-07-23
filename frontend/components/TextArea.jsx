@@ -5,12 +5,13 @@ import { useWordDefinition } from "../hooks/useWordDefinition";
 import WordDefinitionTooltip from "./ui/WordDefinitionTooltip";
 import DocumentUpload from "./DocumentUpload";
 import Clear from "@/media/Clear.svg";
+import DownloadIcon from "@/media/Download.svg";
 
 export default function TextArea({
   text,
   setText,
-  onClear, // Add onClear prop
-  onTextExtracted, // Add onTextExtracted prop for document upload
+  onClear,
+  onTextExtracted,
   isLoading = false,
   isPlaying = false,
   currentText = "",
@@ -22,13 +23,13 @@ export default function TextArea({
   lineHeight = 1.5,
   fontSize = 16,
   fontFamily = "var(--font-lexend)",
-  language = "en", // Add language prop
-  className = "", // Add className prop
-  enableHighlighting = false, // Add highlighting toggle prop
-  enableColorCoding = false, // Add color coding toggle prop
-  colorCodedLetters = [], // Add color coded letters array
-  backgroundColor = "#ffffff", // Add background color prop
-  backgroundTexture = "none", // Add background texture prop
+  language = "en",
+  className = "",
+  enableHighlighting = false,
+  enableColorCoding = false,
+  colorCodedLetters = [],
+  backgroundColor = "#ffffff",
+  backgroundTexture = "none",
 }) {
   // Definitions mode toggle
   const [definitionsMode, setDefinitionsMode] = useState(false);
@@ -809,72 +810,194 @@ export default function TextArea({
     return nearestWord ? getWordOpacity(nearestWord.index) : 1;
   };
 
+  // Download logic from DownloadSection
+  const downloadStyledHTML = () => {
+    // Map each code to a color (customize your colors here)
+    const colorMap = {
+      bd: "#e53e3e",
+      pq: "#3182ce",
+      mw: "#d69e2e",
+      nu: "#38a169",
+      sz: "#805ad5",
+      ao: "#dd6b20",
+      bpdq: "#d53f8c",
+      hn: "#718096",
+      tf: "#2b6cb0",
+      rn: "#9f7aea",
+      gq: "#ed8936",
+      vy: "#319795",
+      ilj: "#dd6b20",
+      xk: "#ed64a6",
+      ceo: "#2c7a7b",
+      vuw: "#68d391",
+      "dev-bv": "#dd6b20",
+      "dev-np": "#3182ce",
+      "dev-ghd": "#805ad5",
+      "dev-nda": "#38a169",
+      "dev-np2": "#d69e2e",
+      "dev-gg": "#9f7aea",
+      "dev-dhb": "#2b6cb0",
+      "dev-dhd": "#d53f8c",
+      "dev-pb": "#dd6b20",
+      "dev-pp": "#805ad5",
+      "dev-cc": "#38a169",
+      "dev-cj": "#319795",
+      "dev-tt": "#718096",
+      "dev-cj2": "#ed8936",
+      "dev-kk": "#d53f8c",
+      "dev-kg": "#68d391",
+      "dev-ss": "#9f7aea",
+      "dev-ss2": "#2c7a7b",
+      "dev-dd": "#dd6b20",
+      "dev-yg": "#3182ce",
+      "dev-jj": "#805ad5",
+      "dev-ng": "#38a169",
+      "dev-rn": "#9f7aea",
+      "dev-nm": "#2b6cb0",
+      "dev-ms": "#d53f8c",
+      "dev-v-ii": "#d69e2e",
+      "dev-v-uu": "#319795",
+      "dev-v-oo": "#805ad5",
+      "dev-v-ee": "#ed8936",
+      "dev-v-ri": "#38a169",
+      "dev-v-aha": "#dd6b20",
+      "dev-v-aa": "#2b6cb0",
+    };
+    function escapeHtml(unsafe) {
+      return unsafe.replace(/[&<>"]|'/g, function (m) {
+        switch (m) {
+          case "&":
+            return "&amp;";
+          case "<":
+            return "&lt;";
+          case ">":
+            return "&gt;";
+          case '"':
+            return "&quot;";
+          case "'":
+            return "&#039;";
+          default:
+            return m;
+        }
+      });
+    }
+    function getColoredHTML(text, selectedCodes) {
+      let escapedText = escapeHtml(text);
+      selectedCodes = [...selectedCodes].sort((a, b) => b.length - a.length);
+      selectedCodes.forEach((code) => {
+        const color = colorMap[code] || "black";
+        let letters = code;
+        if (code.startsWith("dev-")) letters = code.slice(4);
+        if (letters.includes("-")) {
+          const substring = letters.replace(/-/g, "");
+          const regex = new RegExp(substring, "gi");
+          escapedText = escapedText.replace(
+            regex,
+            (match) =>
+              `<span style="color:${color}; font-weight:600;">${match}</span>`
+          );
+        } else {
+          const regex = new RegExp(`[${letters}]`, "gi");
+          escapedText = escapedText.replace(
+            regex,
+            (match) =>
+              `<span style="color:${color}; font-weight:600;">${match}</span>`
+          );
+        }
+      });
+      escapedText = escapedText.replace(/\n/g, "<br>");
+      return escapedText;
+    }
+    const style = `body { white-space: pre-wrap; line-height: ${lineHeight}; letter-spacing: ${letterSpacing}em; font-size: ${fontSize}px; font-family: ${fontFamily}; background-color: ${backgroundColor}; background-image: ${
+      backgroundTexture && backgroundTexture !== ""
+        ? `url('${backgroundTexture}')`
+        : "none"
+    }; background-repeat: repeat; background-position: 0 0; background-size: 10px ${
+      fontSize * lineHeight
+    }px; padding: 20px; }`;
+    const coloredHTML = getColoredHTML(text, colorCodedLetters);
+    const htmlContent = `<!DOCTYPE html><html><head><meta charset=\"UTF-8\" /><title>Colored & Styled Text</title><style>${style}</style></head><body>${coloredHTML}</body></html>`;
+    const blob = new Blob([htmlContent], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "colored-styled-text.html";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className='relative'>
-      {/* Upload Document Button - Top Right */}
-      <DocumentUpload
-        onTextExtracted={onTextExtracted}
-        compact={true}
-        className={`absolute top-1 ${
-          text ? "right-24" : "right-14"
-        } z-10 transition-all duration-200`}
-      />
-
-      {/* Definition Toggle Button - Top Right (between upload and clear) */}
-      <button
-        onClick={() => setDefinitionsMode((v) => !v)}
-        className={`absolute top-1 ${
-          text ? "right-14" : "right-4"
-        } z-10 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer ${
-          definitionsMode ? "bg-blue-50 border-blue-200" : ""
-        }`}
-        title={
-          definitionsMode
-            ? "Disable Definitions Mode"
-            : "Enable Definitions Mode"
-        }
-      >
-        <svg
-          width='16'
-          height='16'
-          viewBox='0 0 24 24'
-          fill='none'
-          xmlns='http://www.w3.org/2000/svg'
-          className={definitionsMode ? "text-blue-500" : "text-gray-500"}
-        >
-          <path
-            d='M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'
-            fill='currentColor'
-          />
-          <path
-            d='M7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z'
-            fill='currentColor'
-          />
-          <circle
-            cx='18'
-            cy='18'
-            r='5'
-            fill={definitionsMode ? "#3b82f6" : "#e5e7eb"}
-            stroke='currentColor'
-          />
-        </svg>
-      </button>
-
-      {/* Clear Button - Top Right */}
-      {text && (
+      {/* Top-right action buttons row */}
+      <div className='absolute top-2 right-4 z-10 flex gap-2 items-center'>
+        <DocumentUpload
+          onTextExtracted={onTextExtracted}
+          compact={true}
+        />
         <button
-          onClick={onClear}
-          disabled={isLoading}
-          className='absolute top-1 right-4 z-10 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer'
-          title='Clear Text'
+          onClick={downloadStyledHTML}
+          className='p-2 hover:bg-blue-50 rounded-full transition-all duration-200 bg-white shadow-sm border border-blue-200 cursor-pointer flex items-center justify-center'
+          title='Download Colored & Styled HTML'
         >
           <img
-            src={Clear.src}
-            alt='Clear'
+            src={DownloadIcon.src}
+            alt='Download'
             className='w-4 h-4'
           />
         </button>
-      )}
+        <button
+          onClick={() => setDefinitionsMode((v) => !v)}
+          className={`p-2 hover:bg-gray-100 rounded-full transition-all duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer flex items-center justify-center ${
+            definitionsMode ? "bg-blue-50 border-blue-200" : ""
+          }`}
+          title={
+            definitionsMode
+              ? "Disable Definitions Mode"
+              : "Enable Definitions Mode"
+          }
+        >
+          <svg
+            width='16'
+            height='16'
+            viewBox='0 0 24 24'
+            fill='none'
+            xmlns='http://www.w3.org/2000/svg'
+            className={definitionsMode ? "text-blue-500" : "text-gray-500"}
+          >
+            <path
+              d='M19 5v14H5V5h14m0-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'
+              fill='currentColor'
+            />
+            <path
+              d='M7 7h10v2H7zm0 4h10v2H7zm0 4h7v2H7z'
+              fill='currentColor'
+            />
+            <circle
+              cx='18'
+              cy='18'
+              r='5'
+              fill={definitionsMode ? "#3b82f6" : "#e5e7eb"}
+              stroke='currentColor'
+            />
+          </svg>
+        </button>
+        {text && (
+          <button
+            onClick={onClear}
+            disabled={isLoading}
+            className='p-2 hover:bg-gray-100 rounded-full transition-all duration-200 bg-white shadow-sm border border-gray-200 cursor-pointer flex items-center justify-center'
+            title='Clear Text'
+          >
+            <img
+              src={Clear.src}
+              alt='Clear'
+              className='w-4 h-4'
+            />
+          </button>
+        )}
+      </div>
 
       {/* Main area: either editable textarea or span-rendered view mode */}
       {isPlaying || definitionsMode

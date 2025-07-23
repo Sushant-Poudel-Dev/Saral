@@ -3,6 +3,7 @@ import TextArea from "@/components/TextArea";
 import TTSControls from "@/components/TTSControls";
 import { useState } from "react";
 import { useTTS } from "@/hooks/useTTS";
+import DownloadSection from "@/components/controls/DownloadSection";
 
 export default function FeaturePage() {
   // Use the actual TTS hook
@@ -120,6 +121,19 @@ export default function FeaturePage() {
     setText(extractedText);
   };
 
+  const lineHeightValue = 20; // or use the actual lineHeight state you already have
+  const strokeWidth = 1;
+  const lineY = lineHeightValue - strokeWidth / 2;
+
+  // Encode the SVG pattern with dynamic height and line position
+  const svgPattern = encodeURIComponent(
+    `<svg width="10" height="${lineHeightValue}" xmlns="http://www.w3.org/2000/svg">
+       <path d="M0 ${lineY} L10 ${lineY}" stroke="%23ccc" stroke-width="${strokeWidth}" />
+     </svg>`
+  );
+
+  const dynamicBackgroundTexture = `data:image/svg+xml,${svgPattern}`;
+
   return (
     <div>
       <div className='text-center mt-4 md:mt-6 mb-2 px-4 md:px-8'>
@@ -172,6 +186,7 @@ export default function FeaturePage() {
         </div>
         <div className='w-full md:w-auto h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
           <TTSControls
+            text={text}
             onSubmit={handleTextSubmit}
             onStop={stop}
             isLoading={isLoading}
