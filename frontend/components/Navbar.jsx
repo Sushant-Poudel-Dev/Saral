@@ -4,6 +4,11 @@ import Button from "./ui/Button";
 import Link from "next/link";
 
 export default function Navbar() {
+  const handleCTAClick = () => {
+    // Navigate to the feature page
+    window.location.href = "/feature";
+  };
+
   return (
     <>
       <div className='flex justify-between py-4 px-6 items-center'>
@@ -22,6 +27,7 @@ export default function Navbar() {
           <Button
             text='Saral Now'
             className='whitespace-nowrap min-w-[120px]'
+            onClick={handleCTAClick}
           />
         </div>
       </div>

@@ -1,38 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
-import { v4 as uuidv4 } from "uuid";
-import fs from "fs";
-import path from "path";
+import { NextResponse } from "next/server";
 
-// Dynamic import for gTTS
 async function createTTS(text, lang, slow) {
   const gTTS = (await import("gtts")).default;
 
   const langMap = {
     ne: "hi", // Nepali -> Hindi fallback
-    en: "en", // English
-    hi: "hi", // Hindi
-    es: "es", // Spanish
-    fr: "fr", // French
-    de: "de", // German
-    it: "it", // Italian
-    pt: "pt", // Portuguese
+    en: "en",
+    hi: "hi",
+    es: "es",
+    fr: "fr",
+    de: "de",
+    it: "it",
+    pt: "pt",
   };
 
   const mappedLang = langMap[lang] || "en";
+
   console.log(
     `Mapping language "${lang}" to "${mappedLang}" ${
       lang === "ne" ? "(Hindi fallback for Nepali)" : ""
     }`
   );
 
-  console.log(`Creating TTS for text: "${text}" with length: ${text.length}`);
-
-  try {
-    return new gTTS(text, mappedLang, slow);
-  } catch (createError) {
-    console.error("Error creating gTTS instance:", createError);
-    throw new Error(`Failed to create TTS instance: ${createError.message}`);
-  }
+  return new gTTS(text, mappedLang, slow);
 }
 
 export async function GET(request) {
@@ -42,10 +32,6 @@ export async function GET(request) {
     const lang = searchParams.get("lang") || "en";
     const slow = searchParams.get("slow") === "true";
 
-    console.log(
-      `TTS API called with: text="${text}", lang="${lang}", slow=${slow}`
-    );
-
     if (!text) {
       return NextResponse.json(
         { error: "Text parameter is required" },
@@ -53,75 +39,37 @@ export async function GET(request) {
       );
     }
 
-    const filename = `${uuidv4()}.mp3`;
-    const tempDir = path.join(process.cwd(), "temp");
+    const ttsInstance = await createTTS(text, lang, slow);
 
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
-    const filePath = path.join(tempDir, filename);
-
-    console.log(
-      `Creating gTTS instance with text: "${text}", lang: "${lang}", slow: ${slow}`
-    );
-
-    // Generate TTS - using dynamic import
-    let ttsInstance;
-    try {
-      ttsInstance = await createTTS(text, lang, slow);
-      console.log("gTTS instance created successfully");
-    } catch (createErr) {
-      console.error("Failed to create gTTS instance:", createErr);
-      return NextResponse.json(
-        { error: `TTS creation failed: ${createErr.message}` },
-        { status: 500 }
-      );
-    }
-
+    // Stream the audio in-memory
+    const chunks = [];
     return new Promise((resolve, reject) => {
-      console.log(`Attempting to save TTS file to: ${filePath}`);
+      const stream = ttsInstance.stream();
 
-      ttsInstance.save(filePath, (err) => {
-        if (err) {
-          console.error("TTS Save Error:", err);
-          console.error("Error details:", err.message || err);
-          resolve(
-            NextResponse.json(
-              { error: `TTS generation failed: ${err.message || err}` },
-              { status: 500 }
-            )
-          );
-          return;
-        }
+      stream.on("data", (chunk) => {
+        chunks.push(chunk);
+      });
 
-        console.log("TTS file saved successfully");
+      stream.on("end", () => {
+        const audioBuffer = Buffer.concat(chunks);
+        resolve(
+          new NextResponse(audioBuffer, {
+            headers: {
+              "Content-Type": "audio/mpeg",
+              "Content-Disposition": 'inline; filename="speech.mp3"',
+            },
+          })
+        );
+      });
 
-        try {
-          // Read the file and return as audio response
-          const audioBuffer = fs.readFileSync(filePath);
-
-          // Clean up the temp file
-          fs.unlinkSync(filePath);
-
-          // Return audio response
-          resolve(
-            new NextResponse(audioBuffer, {
-              headers: {
-                "Content-Type": "audio/mpeg",
-                "Content-Disposition": 'inline; filename="speech.mp3"',
-              },
-            })
-          );
-        } catch (fileErr) {
-          console.error("File Error:", fileErr);
-          resolve(
-            NextResponse.json(
-              { error: "File processing failed" },
-              { status: 500 }
-            )
-          );
-        }
+      stream.on("error", (err) => {
+        console.error("TTS stream error:", err);
+        resolve(
+          NextResponse.json(
+            { error: "TTS stream generation failed" },
+            { status: 500 }
+          )
+        );
       });
     });
   } catch (error) {

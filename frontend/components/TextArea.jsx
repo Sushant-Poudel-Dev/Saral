@@ -358,80 +358,73 @@ export default function TextArea({
     const englishConfusions = colorCodedLetters.filter(
       (item) => !item.startsWith("dev-")
     );
-    for (const confusion of englishConfusions) {
-      if (confusion.includes(letter.toLowerCase())) {
-        return {
-          bg: "#FECACA", // red-200
-          text: "#9B2C2C", // red-800
-        };
+
+    // For English letters (case insensitive)
+    if (/[a-zA-Z]/.test(letter)) {
+      for (const confusion of englishConfusions) {
+        if (new RegExp(`[${confusion}]`, "i").test(letter)) {
+          return {
+            bg: "#FECACA", // red-200
+            text: "#9B2C2C", // red-800
+          };
+        }
       }
+      return null;
     }
 
-    // Check Devanagari consonants
-    const devanagariMap = {
-      "dev-bv": ["ब", "व"],
-      "dev-np": ["ण", "प"],
-      "dev-ghd": ["घ", "ध"],
-      "dev-nda": ["न", "द", "अ"],
-      "dev-np2": ["न", "प"],
-      "dev-gg": ["ग", "घ"],
-      "dev-dhb": ["ढ", "भ"],
-      "dev-dhd": ["ध", "द"],
-      "dev-pb": ["फ", "ब"],
-      "dev-pp": ["प", "फ"],
-      "dev-cc": ["च", "छ"],
-      "dev-cj": ["च", "ज"],
-      "dev-tt": ["ट", "ठ"],
-      "dev-cj2": ["छ", "झ"],
-      "dev-kk": ["क", "ख"],
-      "dev-kg": ["क", "घ"],
-      "dev-ss": ["ष", "श"],
-      "dev-ss2": ["ष", "स"],
-      "dev-dd": ["द", "ड"],
-      "dev-yg": ["य", "ग"],
-      "dev-jj": ["ज", "झ"],
-      "dev-ng": ["न", "ग"],
-      "dev-rn": ["र", "ङ"],
-      "dev-nm": ["न", "म"],
-      "dev-ms": ["म", "स"],
-    };
+    // Check if it's a Devanagari character
+    if (/[\u0900-\u097F]/.test(letter)) {
+      const devanagariMap = {
+        // Consonants
+        "dev-bv": ["ब", "व"],
+        "dev-np": ["ण", "प"],
+        "dev-ghd": ["घ", "ध"],
+        "dev-nda": ["न", "द"],
+        "dev-np2": ["न", "प"],
+        "dev-gg": ["ग", "घ"],
+        "dev-dhb": ["ढ", "भ"],
+        "dev-dhd": ["ध", "द"],
+        "dev-pb": ["फ", "ब"],
+        "dev-pp": ["प", "फ"],
+        "dev-cc": ["च", "छ"],
+        "dev-cj": ["च", "ज"],
+        "dev-tt": ["ट", "ठ"],
+        "dev-cj2": ["छ", "झ"],
+        "dev-kk": ["क", "ख"],
+        "dev-kg": ["क", "घ"],
+        "dev-ss": ["ष", "श"],
+        "dev-ss2": ["ष", "स"],
+        "dev-dd": ["द", "ड"],
+        "dev-yg": ["य", "ग"],
+        "dev-jj": ["ज", "झ"],
+        "dev-ng": ["न", "ग"],
+        "dev-rn": ["र", "न"],
+        "dev-nm": ["न", "म"],
+        "dev-ms": ["म", "स"],
+        // Vowels
+        "dev-v-ii": ["इ", "ई"],
+        "dev-v-uu": ["उ", "ऊ"],
+        "dev-v-oo": ["ओ", "औ"],
+        "dev-v-ee": ["ए", "ऐ"],
+        "dev-v-ri": ["ऋ", "ऋृ"],
+        "dev-v-aha": ["अं", "अः"],
+        "dev-v-aa": ["अ", "आ"],
+      };
 
-    const devConsonants = colorCodedLetters.filter(
-      (item) => item.startsWith("dev-") && !item.startsWith("dev-v-")
-    );
-    for (const confusion of devConsonants) {
-      if (
-        devanagariMap[confusion] &&
-        devanagariMap[confusion].includes(letter)
-      ) {
-        return {
-          bg: "#E9D8FD", // purple-200
-          text: "#553C9A", // purple-800
-        };
-      }
-    }
-
-    // Check Devanagari vowels
-    const devanagariVowelMap = {
-      "dev-v-ii": ["इ", "ई"],
-      "dev-v-uu": ["उ", "ऊ"],
-      "dev-v-oo": ["ओ", "औ"],
-      "dev-v-ee": ["ए", "ऐ"],
-      "dev-v-ri": ["ऋ", "रि"],
-      "dev-v-aha": ["अं", "अः"],
-      "dev-v-aa": ["अ", "आ", "अः"],
-    };
-
-    const devVowels = colorCodedLetters.filter((item) =>
-      item.startsWith("dev-v-")
-    );
-    for (const confusion of devVowels) {
-      const key = confusion.replace("dev-v-", "dev-v-");
-      if (devanagariVowelMap[key] && devanagariVowelMap[key].includes(letter)) {
-        return {
-          bg: "#BEE3F8", // blue-200
-          text: "#2A4365", // blue-800
-        };
+      for (const code of colorCodedLetters) {
+        if (code.startsWith("dev-") && devanagariMap[code]) {
+          if (devanagariMap[code].includes(letter)) {
+            return code.startsWith("dev-v-")
+              ? {
+                  bg: "#BEE3F8", // blue-200 for vowels
+                  text: "#2A4365", // blue-800
+                }
+              : {
+                  bg: "#E9D8FD", // purple-200 for consonants
+                  text: "#553C9A", // purple-800
+                };
+          }
+        }
       }
     }
 
