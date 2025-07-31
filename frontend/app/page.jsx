@@ -237,7 +237,8 @@ export default function Home() {
             />
             <TestomonialCard
               className='bg-blue w-full md:w-auto'
-              testimonial='I find the colors of this website extremely welcoming and comforting to my eyes. Ani very saral. The way the text stands out in white color when its been highlighted it especially helped me stay on track process words and not get lost as the reader reads'
+              testimonial='I find the colors of this website extremely welcoming and comforting to my eyes. And very "saral". 
+The way the text stands out in white color when its been highlighted, it especially helped me stay on tract (track), process words and not get lost as the reader (text to speech) reads the text. '
               userName='Reshmi Maharjan'
               userRank='2nd year SOSS Thames college'
             />
