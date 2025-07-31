@@ -79,11 +79,11 @@ export default function Home() {
         <div className='flex flex-col md:flex-row items-center md:items-start pt-6 md:pt-20 justify-center md:justify-evenly gap-8 md:gap-50 min-h-[30rem] md:h-[42rem] px-4 md:px-15'>
           <div className='w-full md:w-2/5 px-4 md:ml-10 py-5 md:py-10 text-center md:text-left'>
             <h1 className='mb-4 text-3xl md:text-4xl'>
-              Where reading becomes easier.
+              Where reading is accessible
             </h1>
             <h2 className='mb-6 md:mb-4 text-lg md:text-xl'>
               {renderColorCodedText(
-                "Supportive tools for dyslexia, ADHD, and autism with customizable text, color-coded letters, and read-aloud in English and Nepali."
+                "Supportive tools for people with reading difficulties with customizable text, color-coded letters, and read-aloud in English and Nepali."
               )}
             </h2>
 

@@ -274,96 +274,69 @@ export default function ColorsSection({
                   Background Color
                 </label>
                 <div className='grid grid-cols-4 gap-2'>
-                  {/* ...existing color buttons... */}
                   <button
                     onClick={() =>
-                      setBackgroundColor && setBackgroundColor("#efe9e4")
+                      setBackgroundColor && setBackgroundColor("#edd1b0")
                     }
                     className={`w-8 h-8 rounded border ${
-                      backgroundColor === "#efe9e4"
+                      backgroundColor === "#edd1b0"
                         ? "border-slate-800 border-2"
                         : "border-gray-200"
                     }`}
-                    style={{ backgroundColor: "#efe9e4" }}
-                    title='Background'
+                    style={{ backgroundColor: "#edd1b0" }}
+                    title='Peach'
                     disabled={isLoading}
                   ></button>
                   <button
                     onClick={() =>
-                      setBackgroundColor && setBackgroundColor("#bbedc2")
+                      setBackgroundColor && setBackgroundColor("#eddd63")
                     }
                     className={`w-8 h-8 rounded border ${
-                      backgroundColor === "#bbedc2"
+                      backgroundColor === "#eddd63"
                         ? "border-slate-800 border-2"
                         : "border-gray-200"
                     }`}
-                    style={{ backgroundColor: "#bbedc2" }}
-                    title='Green/Mint'
-                    disabled={isLoading}
-                  ></button>
-                  <button
-                    onClick={() =>
-                      setBackgroundColor && setBackgroundColor("#fba69d")
-                    }
-                    className={`w-8 h-8 rounded border ${
-                      backgroundColor === "#fba69d"
-                        ? "border-slate-800 border-2"
-                        : "border-gray-200"
-                    }`}
-                    style={{ backgroundColor: "#fba69d" }}
-                    title='Pink/Coral'
-                    disabled={isLoading}
-                  ></button>
-                  <button
-                    onClick={() =>
-                      setBackgroundColor && setBackgroundColor("#f2c969")
-                    }
-                    className={`w-8 h-8 rounded border ${
-                      backgroundColor === "#f2c969"
-                        ? "border-slate-800 border-2"
-                        : "border-gray-200"
-                    }`}
-                    style={{ backgroundColor: "#f2c969" }}
+                    style={{ backgroundColor: "#eddd63" }}
                     title='Yellow'
                     disabled={isLoading}
                   ></button>
                   <button
                     onClick={() =>
-                      setBackgroundColor && setBackgroundColor("#a6e5f2")
+                      setBackgroundColor && setBackgroundColor("#f8fd98")
                     }
                     className={`w-8 h-8 rounded border ${
-                      backgroundColor === "#a6e5f2"
+                      backgroundColor === "#f8fd98"
                         ? "border-slate-800 border-2"
                         : "border-gray-200"
                     }`}
-                    style={{ backgroundColor: "#a6e5f2" }}
-                    title='Blue/Sky'
+                    style={{ backgroundColor: "#f8fd98" }}
+                    title='Light Yellow'
                     disabled={isLoading}
                   ></button>
                   <button
                     onClick={() =>
-                      setBackgroundColor && setBackgroundColor("#dcb760")
+                      setBackgroundColor && setBackgroundColor("#a5f7e1")
                     }
                     className={`w-8 h-8 rounded border ${
-                      backgroundColor === "#dcb760"
+                      backgroundColor === "#a5f7e1"
                         ? "border-slate-800 border-2"
                         : "border-gray-200"
                     }`}
-                    style={{ backgroundColor: "#dcb760" }}
-                    title='Honey'
+                    style={{ backgroundColor: "#a5f7e1" }}
+                    title='Turquoise'
                     disabled={isLoading}
                   ></button>
                   <button
                     onClick={() =>
-                      setBackgroundColor && setBackgroundColor("#f5f5f5")
+                      setBackgroundColor && setBackgroundColor("#fff5ee")
                     }
                     className={`w-8 h-8 rounded border ${
-                      backgroundColor === "#f5f5f5"
+                      backgroundColor === "#fff5ee"
                         ? "border-slate-800 border-2"
                         : "border-gray-200"
                     }`}
-                    style={{ backgroundColor: "#f5f5f5" }}
-                    title='Cream'
+                    style={{ backgroundColor: "#fff5ee" }}
+                    title='Seashell'
                     disabled={isLoading}
                   ></button>
                   <button

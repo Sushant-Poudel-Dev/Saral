@@ -4,6 +4,11 @@ import TTSControls from "@/components/TTSControls";
 import { useState } from "react";
 import { useTTS } from "@/hooks/useTTS";
 import DownloadSection from "@/components/controls/DownloadSection";
+import MobileBottomNavbar from "@/components/MobileBottomNavbar";
+import Modal from "@/components/ui/Modal";
+import TypographySection from "@/components/controls/TypographySection";
+import ColorsSection from "@/components/controls/ColorsSection";
+import TTSSection from "@/components/controls/TTSSection";
 
 export default function FeaturePage() {
   // Use the actual TTS hook
@@ -35,6 +40,9 @@ export default function FeaturePage() {
   const [colorCodedLetters, setColorCodedLetters] = useState([]);
   const [backgroundColor, setBackgroundColor] = useState("#ffffff");
   const [backgroundTexture, setBackgroundTexture] = useState("none");
+  const [activeModal, setActiveModal] = useState(null); // values: "typography", "audio", "display"
+
+  const closeModal = () => setActiveModal(null);
 
   const availableSpeeds = [
     { value: "slow", name: "Slow", rate: 0.5 },
@@ -184,7 +192,7 @@ export default function FeaturePage() {
             className='drop-shadow-lg drop-shadow-gray-350 w-full rounded-lg p-10 !h-[40rem] resize-none'
           />
         </div>
-        <div className='w-full md:w-auto h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
+        <div className='hidden md:block w-full md:w-auto h-[40rem] drop-shadow-lg drop-shadow-gray-350 rounded-xl bg-white transition-all duration-500 ease-in-out'>
           <TTSControls
             text={text}
             onSubmit={handleTextSubmit}
@@ -218,6 +226,71 @@ export default function FeaturePage() {
             setBackgroundTexture={setBackgroundTexture}
             className='flex flex-col w-full bg-white'
           />
+        </div>
+        <div className='sm:hidden'>
+          {/* Mobile Bottom Navbar - Visible on Mobile */}
+          <MobileBottomNavbar onSelect={setActiveModal} />
+
+          {/* Typography Modal */}
+          <Modal
+            isOpen={activeModal === "typography"}
+            onClose={closeModal}
+            title='Typography Settings'
+          >
+            <TypographySection
+              isLoading={isLoading}
+              letterSpacing={letterSpacing}
+              setLetterSpacing={setLetterSpacing}
+              lineHeight={lineHeight}
+              setLineHeight={setLineHeight}
+              fontSize={fontSize}
+              setFontSize={setFontSize}
+              fontFamily={fontFamily}
+              setFontFamily={setFontFamily}
+            />
+          </Modal>
+
+          {/* Colors Modal */}
+          <Modal
+            isOpen={activeModal === "display"}
+            onClose={closeModal}
+            title='Display Settings'
+          >
+            <ColorsSection
+              isLoading={isLoading}
+              enableColorCoding={enableColorCoding}
+              setEnableColorCoding={setEnableColorCoding}
+              colorCodedLetters={colorCodedLetters}
+              setColorCodedLetters={setColorCodedLetters}
+              backgroundColor={backgroundColor}
+              setBackgroundColor={setBackgroundColor}
+              backgroundTexture={backgroundTexture}
+              setBackgroundTexture={setBackgroundTexture}
+            />
+          </Modal>
+
+          {/* Audio Modal */}
+          <Modal
+            isOpen={activeModal === "audio"}
+            onClose={closeModal}
+            title='Audio Settings'
+          >
+            <TTSSection
+              onSubmit={handleTextSubmit}
+              onStop={stop}
+              isLoading={isLoading}
+              isPlaying={isPlaying}
+              speed={speed}
+              setSpeed={setSpeed}
+              enableParagraphIsolation={enableParagraphIsolation}
+              setEnableParagraphIsolation={setEnableParagraphIsolation}
+              enableSentenceIsolation={enableSentenceIsolation}
+              setEnableSentenceIsolation={setEnableSentenceIsolation}
+              enableHighlighting={enableHighlighting}
+              setEnableHighlighting={setEnableHighlighting}
+              hasText={text.trim().length > 0}
+            />
+          </Modal>
         </div>
       </div>
     </div>

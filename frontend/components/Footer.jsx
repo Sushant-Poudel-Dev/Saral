@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "./ui/Button";
+import saralLogo from "../media/saralLogo.svg";
 
 export default function Footer() {
   return (
@@ -8,7 +9,11 @@ export default function Footer() {
       <div className='flex px-15 py-10'>
         <div className='w-[120%]'>
           <h2>Built for every mind.</h2>
-          <h1>SARAL</h1>
+          <img
+            src={saralLogo.src}
+            alt='Saral Logo'
+            className='h-20 mt-2 ml-2 inline-block'
+          />
         </div>
         <div className='w-full'>
           <h2>Stay updated with Saral</h2>
