@@ -29,47 +29,70 @@ export default function Home() {
   };
 
   const renderColorCodedText = (text) => {
-    if (!isColorCodingActive) return text;
-
-    // Create a combined regex for all problematic letters
-    const combinedRegex = /([bdBDpqPQmwMW])/g;
+    const combinedRegex = /([bdBDpqPQmwMW69])/g;
 
     return text.split(combinedRegex).map((part, index) => {
       if (!part) return null;
 
-      // Check which pattern this part matches and apply appropriate styling
-      if (/[bdBD]/.test(part)) {
-        return (
-          <span
-            key={index}
-            className='bg-pink text-white px-1 rounded transition-all duration-300'
-          >
-            {part}
-          </span>
-        );
-      } else if (/[pqPQ]/.test(part)) {
-        return (
-          <span
-            key={index}
-            className='bg-blue text-white px-1 rounded transition-all duration-300'
-          >
-            {part}
-          </span>
-        );
-      } else if (/[mwMW]/.test(part)) {
-        return (
-          <span
-            key={index}
-            className='bg-yellow text-black px-1 rounded transition-all duration-300'
-          >
-            {part}
-          </span>
-        );
+      if (isColorCodingActive) {
+        if (/[bdBD]/.test(part)) {
+          return (
+            <span
+              key={index}
+              className='bg-pink text-white px-1 rounded transition-all duration-300'
+            >
+              {part}
+            </span>
+          );
+        } else if (/[pqPQ69]/.test(part)) {
+          // added 6 and 9 here
+          return (
+            <span
+              key={index}
+              className='bg-blue text-white px-1 rounded transition-all duration-300'
+            >
+              {part}
+            </span>
+          );
+        } else if (/[mwMW]/.test(part)) {
+          return (
+            <span
+              key={index}
+              className='bg-yellow text-black px-1 rounded transition-all duration-300'
+            >
+              {part}
+            </span>
+          );
+        }
       }
 
-      // Return normal text
-      return part;
+      // Always return span so letter-spacing can apply
+      return (
+        <span
+          key={index}
+          className='transition-all duration-300'
+        >
+          {part}
+        </span>
+      );
     });
+  };
+
+  const [isSpacingIncreased, setIsSpacingIncreased] = useState(false);
+
+  const handleReadAloud = () => {
+    const text =
+      "Saral reads aloud with word-by-word highlighting for smoother comprehension.";
+    const utterance = new SpeechSynthesisUtterance(text);
+    speechSynthesis.speak(utterance);
+  };
+
+  const handleColorCodingToggle = () => {
+    setIsColorCodingActive((prev) => !prev);
+  };
+
+  const handleSpacingToggle = () => {
+    setIsSpacingIncreased((prev) => !prev);
   };
 
   return (
@@ -147,11 +170,19 @@ export default function Home() {
                   className='w-10 h-10 md:w-12 md:h-12'
                 />
               }
+              onClick={handleReadAloud}
             />
+
             <FeatureCard
               className='bg-pink w-full md:w-auto'
               title='Easily spot confusing letters'
-              description='Highlight letter pairs like b/d, p/q, and 6/9 to reduce confusion while reading.'
+              description={
+                <>
+                  {renderColorCodedText(
+                    "Highlight letter pairs like b/d, p/q, and 6/9 to reduce confusion while reading."
+                  )}
+                </>
+              }
               icon={
                 <img
                   src={Paint.src}
@@ -159,7 +190,9 @@ export default function Home() {
                   className='w-10 h-10 md:w-12 md:h-12'
                 />
               }
+              onClick={handleColorCodingToggle}
             />
+
             <FeatureCard
               className='bg-yellow w-full md:w-auto'
               title='Read at your own pace'
@@ -171,6 +204,8 @@ export default function Home() {
                   className='w-10 h-10 md:w-12 md:h-12'
                 />
               }
+              onClick={handleSpacingToggle}
+              isSpacingIncreased={isSpacingIncreased}
             />
           </div>
         </div>
