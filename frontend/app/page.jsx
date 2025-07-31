@@ -14,6 +14,9 @@ import Volume from "../media/Volume.svg";
 import Paint from "../media/Paint.svg";
 import Rular from "../media/Rular.svg";
 
+// User Images
+import NirjalaRegmi from "../media/NirjalaRegmi.jpg";
+
 // Quote Components
 import Quote from "@/components/Quote";
 
@@ -221,15 +224,22 @@ export default function Home() {
           <div className='flex flex-col md:flex-row gap-8 md:gap-4 mt-8 md:mt-15 justify-around'>
             <TestomonialCard
               className='bg-pink w-full md:w-auto'
-              testimonial='Reading used to make me tired and confused, especially with letters like b and d. But Saral makes it so much easier.'
+              testimonial='I liked the amount of options the app has in terms of text formatting as well as the amount of letter combinations that might be confusing. The app is a great initiative towards making reading more inclusive, while still keeping things simple enough for everyone.'
+              userName='Nirjala Regmi'
+              userRank='2nd year SOSS Thames college'
+              // image={NirjalaRegmi.src}
             />
             <TestomonialCard
               className='bg-yellow w-full md:w-auto'
-              testimonial='Reading used to make me tired and confused, especially with letters like b and d. But Saral makes it so much easier.'
+              testimonial='This app makes reading more inclusive and accessible for people with reading difficulties. Its clean design, voice support, and customizable features truly help users connect with text in their own way. Everyone deserves the joy of reading and this app helps make that possible.'
+              userName='Sambhavi Timilsina'
+              userRank='2nd year SOSS Thames college'
             />
             <TestomonialCard
               className='bg-blue w-full md:w-auto'
               testimonial='Reading used to make me tired and confused, especially with letters like b and d. But Saral makes it so much easier.'
+              userName='Diya Rai'
+              userRank='2nd year SOSS Thames college'
             />
           </div>
         </div>
