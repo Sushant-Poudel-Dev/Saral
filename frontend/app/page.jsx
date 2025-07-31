@@ -237,8 +237,8 @@ export default function Home() {
             />
             <TestomonialCard
               className='bg-blue w-full md:w-auto'
-              testimonial='Reading used to make me tired and confused, especially with letters like b and d. But Saral makes it so much easier.'
-              userName='Diya Rai'
+              testimonial='I find the colors of this website extremely welcoming and comforting to my eyes. Ani very saral. The way the text stands out in white color when its been highlighted it especially helped me stay on track process words and not get lost as the reader reads'
+              userName='Reshmi Maharjan'
               userRank='2nd year SOSS Thames college'
             />
           </div>
