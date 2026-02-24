@@ -1,7 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useTTS } from "@/hooks/useTTS";
+import { useAuth } from "@/context/AuthContext";
+import { createClient } from "@/lib/supabase/client";
+import {
+  recordDownload,
+  recordAudioExport,
+  recordScan,
+  recordDocumentImport,
+  saveTempDocument,
+  consumePendingText,
+  saveDraft,
+  clearDraft,
+} from "@/services/trackingService";
 import Modal from "@/components/ui/Modal";
 import TextArea from "@/components/feature/TextArea";
 import TTSControls from "@/components/feature/TTSControls";
@@ -31,6 +43,54 @@ export default function FeaturePage() {
   } = useTTS();
 
   const [text, setText] = useState("");
+  const textRef = useRef(text);
+  const initialLoadDone = useRef(false);
+  const lastSavedContent = useRef<string | null>(null);
+
+  // Keep ref in sync so the cleanup can access the latest text
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
+
+  // On mount: load any pending text passed from dashboard, or restore draft
+  useEffect(() => {
+    if (initialLoadDone.current) return;
+    initialLoadDone.current = true;
+    const pending = consumePendingText();
+    if (pending) {
+      setText(pending);
+      clearDraft();
+    }
+  }, []);
+
+  // Auto-save as temp doc when leaving the page
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const t = textRef.current.trim();
+      if (t) {
+        saveDraft(t);
+        // saveTempDocument deduplicates by content automatically
+        const title = t.slice(0, 60) || "Untitled";
+        saveTempDocument(title, t);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // Save on SPA navigation — dedup by content prevents duplicates
+      const t = textRef.current.trim();
+      if (t) {
+        const title = t.slice(0, 60) || "Untitled";
+        saveTempDocument(title, t);
+      }
+    };
+  }, []);
+
+  const supabase = createClient();
+  const { user, refreshStats, settings: savedSettings } = useAuth();
+
   const [speed, setSpeed] = useState("normal");
   const [letterSpacing, setLetterSpacing] = useState(0);
   const [lineHeight, setLineHeight] = useState(1.5);
@@ -47,6 +107,43 @@ export default function FeaturePage() {
   const [syllableSplitThreshold, setSyllableSplitThreshold] = useState(8);
   const [enableHeatmap, setEnableHeatmap] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const settingsApplied = useRef(false);
+
+  // Apply saved settings from profile on mount
+  useEffect(() => {
+    if (savedSettings && !settingsApplied.current) {
+      settingsApplied.current = true;
+      setFontSize(savedSettings.font_size);
+      const fontMap: Record<string, string> = {
+        Lexend: "var(--font-lexend)",
+        Inter: "var(--font-inter)",
+        Roboto: "var(--font-roboto)",
+        Montserrat: "var(--font-montserrat)",
+        OpenDyslexic: "var(--font-opendyslexic)",
+      };
+      setFontFamily(
+        fontMap[savedSettings.font_family] || savedSettings.font_family,
+      );
+      setLineHeight(savedSettings.line_height);
+      setLetterSpacing(savedSettings.letter_spacing);
+      setWordSpacing(savedSettings.word_spacing);
+      setEnableHighlighting(savedSettings.auto_highlight);
+      setEnableColorCoding(savedSettings.color_coding_enabled);
+      setEnableSyllableSplit(savedSettings.syllable_splitting_enabled);
+      setEnableHeatmap(savedSettings.heatmap_enabled);
+      if (savedSettings.background_color)
+        setBackgroundColor(savedSettings.background_color);
+      if (savedSettings.background_texture)
+        setBackgroundTexture(savedSettings.background_texture);
+      if (savedSettings.text_align) setTextAlign(savedSettings.text_align);
+      if (savedSettings.syllable_split_threshold)
+        setSyllableSplitThreshold(savedSettings.syllable_split_threshold);
+      // Map tts_speed to speed preset
+      if (savedSettings.tts_speed <= 0.7) setSpeed("slow");
+      else if (savedSettings.tts_speed >= 1.3) setSpeed("fast");
+      else setSpeed("normal");
+    }
+  }, [savedSettings]);
 
   const closeModal = () => setActiveModal(null);
 
@@ -85,6 +182,50 @@ export default function FeaturePage() {
   };
 
   const handleClear = () => setText("");
+
+  // ── Tracking callbacks ─────────────────────────────────────────────
+
+  const handleSnapshotDownloaded = useCallback(async () => {
+    if (!user) return;
+    const title = text.trim().slice(0, 60) || "Untitled";
+    await recordDownload(supabase, user.id, title, "png");
+    refreshStats();
+  }, [user, text, supabase, refreshStats]);
+
+  const handleAudioExported = useCallback(async () => {
+    if (!user) return;
+    const title = text.trim().slice(0, 60) || "Untitled";
+    const lang = detectLanguage(text);
+    await recordAudioExport(supabase, user.id, title, lang);
+    refreshStats();
+  }, [user, text, supabase, refreshStats]);
+
+  const handleImageScanned = useCallback(
+    async (filename: string, extractedText: string) => {
+      if (!user) return;
+      await recordScan(supabase, user.id, filename, extractedText);
+      refreshStats();
+      // Save as temp document (dedup handles duplicates)
+      saveTempDocument(filename, extractedText);
+      // Mark as already saved so unmount won't duplicate
+      lastSavedContent.current = extractedText.trim();
+    },
+    [user, supabase, refreshStats],
+  );
+
+  const handleFileImported = useCallback(
+    async (filename: string, content: string) => {
+      if (!user) return;
+      await recordDocumentImport(supabase, user.id, filename, content);
+      refreshStats();
+      // Save as temp document (dedup handles duplicates)
+      saveTempDocument(filename, content);
+      // Mark as already saved so unmount won't duplicate
+      lastSavedContent.current = content.trim();
+    },
+    [user, supabase, refreshStats],
+  );
+
   const handleDocumentUpload = (extractedText: string) =>
     setText(extractedText);
 
@@ -147,6 +288,10 @@ export default function FeaturePage() {
             enableSyllableSplit={enableSyllableSplit}
             syllableSplitThreshold={syllableSplitThreshold}
             enableHeatmap={enableHeatmap}
+            onSnapshotDownloaded={handleSnapshotDownloaded}
+            onAudioExported={handleAudioExported}
+            onImageScanned={handleImageScanned}
+            onFileImported={handleFileImported}
           />
         </div>
 

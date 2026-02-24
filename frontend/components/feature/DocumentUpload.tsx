@@ -5,6 +5,7 @@ import { Upload, FileText, Loader2, AlertCircle } from "lucide-react";
 
 interface DocumentUploadProps {
   onTextExtracted: (text: string) => void;
+  onFileImported?: (filename: string, content: string) => void;
   compact?: boolean;
 }
 
@@ -65,6 +66,7 @@ async function extractText(file: File): Promise<string> {
 
 export default function DocumentUpload({
   onTextExtracted,
+  onFileImported,
   compact = false,
 }: DocumentUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -85,6 +87,7 @@ export default function DocumentUpload({
           throw new Error("No readable text found in the document.");
         }
         onTextExtracted(text);
+        onFileImported?.(file.name, text);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to read file.");
         setFileName(null);
@@ -92,7 +95,7 @@ export default function DocumentUpload({
         setIsProcessing(false);
       }
     },
-    [onTextExtracted],
+    [onTextExtracted, onFileImported],
   );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

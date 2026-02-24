@@ -6,11 +6,13 @@ import { extractTextFromImage } from "@/services/ocrService";
 
 interface ImageUploadProps {
   onTextExtracted: (text: string) => void;
+  onImageScanned?: (filename: string, extractedText: string) => void;
   compact?: boolean;
 }
 
 export default function ImageUpload({
   onTextExtracted,
+  onImageScanned,
   compact = false,
 }: ImageUploadProps) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -25,6 +27,7 @@ export default function ImageUpload({
           alert(result.errorMessage || "Failed to extract text from image.");
         } else {
           onTextExtracted(result.text);
+          onImageScanned?.(file.name, result.text);
         }
       } catch {
         alert("Failed to process image. Please try again.");
@@ -32,7 +35,7 @@ export default function ImageUpload({
         setIsProcessing(false);
       }
     },
-    [onTextExtracted],
+    [onTextExtracted, onImageScanned],
   );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

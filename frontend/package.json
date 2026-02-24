@@ -11,6 +11,8 @@
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
     "@headlessui/react": "^2.2.9",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.97.0",
     "html2canvas-pro": "^2.0.0",
     "lucide-react": "^0.575.0",
     "mammoth": "^1.11.0",

@@ -36,6 +36,10 @@ interface TextAreaProps {
   enableSyllableSplit?: boolean;
   syllableSplitThreshold?: number;
   enableHeatmap?: boolean;
+  onSnapshotDownloaded?: () => void;
+  onAudioExported?: () => void;
+  onImageScanned?: (filename: string, extractedText: string) => void;
+  onFileImported?: (filename: string, content: string) => void;
 }
 
 interface Word {
@@ -90,6 +94,10 @@ export default function TextArea({
   enableSyllableSplit = false,
   syllableSplitThreshold = 8,
   enableHeatmap = false,
+  onSnapshotDownloaded,
+  onAudioExported,
+  onImageScanned,
+  onFileImported,
 }: TextAreaProps) {
   // Definitions mode toggle
   const [definitionsMode, setDefinitionsMode] = useState(false);
@@ -136,13 +144,14 @@ export default function TextArea({
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      onAudioExported?.();
     } catch (err) {
       console.error("Export audio failed:", err);
       alert("Failed to export audio. Please try again.");
     } finally {
       setIsExportingAudio(false);
     }
-  }, [text]);
+  }, [text, onAudioExported]);
 
   // Pre-calculate text structure when text changes
   const textStructure = useMemo(() => {
@@ -727,6 +736,7 @@ export default function TextArea({
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+        onSnapshotDownloaded?.();
       }, "image/png");
     } catch {
       alert("Failed to capture snapshot. Please try again.");
@@ -742,6 +752,7 @@ export default function TextArea({
     letterSpacing,
     wordSpacing,
     textAlign,
+    onSnapshotDownloaded,
   ]);
 
   // Function to render normal mode (editable textarea)
@@ -1143,11 +1154,13 @@ export default function TextArea({
         <div className='flex items-center gap-1.5'>
           <ImageUpload
             onTextExtracted={onTextExtracted}
+            onImageScanned={onImageScanned}
             compact={true}
           />
 
           <DocumentUpload
             onTextExtracted={onTextExtracted}
+            onFileImported={onFileImported}
             compact={true}
           />
 
