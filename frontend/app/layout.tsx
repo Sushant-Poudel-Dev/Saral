@@ -25,7 +25,7 @@ export default function RootLayout({
     <html lang='en'>
       <body className={`${lexend.variable} antialiased`}>
         <AuthProvider>
-          <Navbar />
+          {/* <Navbar /> */}
           <main>{children}</main>
           <Footer />
         </AuthProvider>

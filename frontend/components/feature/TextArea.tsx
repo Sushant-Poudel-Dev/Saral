@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useCallback } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import html2canvas from "html2canvas-pro";
 import { useWordDefinition } from "@/hooks/useWordDefinition";
 import WordDefinitionTooltip from "@/components/feature/WordDefinitionTooltip";
-import DocumentUpload from "@/components/feature/DocumentUpload";
+import DocumentUpload, { type UploadHandle } from "@/components/feature/DocumentUpload";
 import ImageUpload from "@/components/feature/ImageUpload";
 import { X, Camera, BookOpen, Volume2, Loader2 } from "lucide-react";
+import type { StudioMode } from "@/services/trackingService";
 
 interface TextAreaProps {
   text: string;
@@ -40,6 +41,7 @@ interface TextAreaProps {
   onAudioExported?: () => void;
   onImageScanned?: (filename: string, extractedText: string) => void;
   onFileImported?: (filename: string, content: string) => void;
+  autoOpenUpload?: StudioMode | null;
 }
 
 interface Word {
@@ -98,9 +100,25 @@ export default function TextArea({
   onAudioExported,
   onImageScanned,
   onFileImported,
+  autoOpenUpload = null,
 }: TextAreaProps) {
   // Definitions mode toggle
   const [definitionsMode, setDefinitionsMode] = useState(false);
+
+  const imageUploadRef = useRef<UploadHandle>(null);
+  const documentUploadRef = useRef<UploadHandle>(null);
+
+  useEffect(() => {
+    if (!autoOpenUpload || autoOpenUpload === "blank") return;
+    const timer = setTimeout(() => {
+      if (autoOpenUpload === "ocr") {
+        imageUploadRef.current?.openPicker();
+      } else if (autoOpenUpload === "import") {
+        documentUploadRef.current?.openPicker();
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [autoOpenUpload]);
 
   // For lined background scroll sync in both modes
   const [normalScrollTop, setNormalScrollTop] = useState(0);
@@ -1153,12 +1171,14 @@ export default function TextArea({
 
         <div className='flex items-center gap-1.5'>
           <ImageUpload
+            ref={imageUploadRef}
             onTextExtracted={onTextExtracted}
             onImageScanned={onImageScanned}
             compact={true}
           />
 
           <DocumentUpload
+            ref={documentUploadRef}
             onTextExtracted={onTextExtracted}
             onFileImported={onFileImported}
             compact={true}

@@ -2,17 +2,21 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useSessionTracker } from "@/hooks/useSessionTracker";
 import { LogIn } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, profile, isLoading } = useAuth();
 
   // Track session time while user is authenticated
   useSessionTracker();
+
+  // Do not render top Navbar on homepage to allow custom workspace layout
+  if (pathname === "/") return null;
 
   // Derive display values from real data
   const displayName =
