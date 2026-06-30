@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import type { StudioTemplateSettings } from "@/constants/studioTemplates";
 
 // ── Track a document/snapshot download ──────────────────────────────────────
 export async function recordDownload(
@@ -138,10 +139,51 @@ export function setPendingText(text: string): void {
   localStorage.setItem(PENDING_TEXT_KEY, text);
 }
 
+export function clearPendingText(): void {
+  localStorage.removeItem(PENDING_TEXT_KEY);
+}
+
 export function consumePendingText(): string | null {
   const text = localStorage.getItem(PENDING_TEXT_KEY);
   if (text !== null) localStorage.removeItem(PENDING_TEXT_KEY);
   return text;
+}
+
+// ── Studio entry mode (blank / ocr / import) ─────────────────────────────────
+
+export type StudioMode = "blank" | "ocr" | "import";
+
+const STUDIO_MODE_KEY = "saral_studio_mode";
+
+export function setStudioMode(mode: StudioMode): void {
+  localStorage.setItem(STUDIO_MODE_KEY, mode);
+}
+
+export function consumeStudioMode(): StudioMode | null {
+  const mode = localStorage.getItem(STUDIO_MODE_KEY);
+  if (mode !== null) localStorage.removeItem(STUDIO_MODE_KEY);
+  if (mode === "blank" || mode === "ocr" || mode === "import") return mode;
+  return null;
+}
+
+// ── Studio template preset (apply settings in editor) ───────────────────────
+
+const PENDING_TEMPLATE_KEY = "saral_pending_template";
+
+export function setPendingTemplate(settings: StudioTemplateSettings): void {
+  localStorage.setItem(PENDING_TEMPLATE_KEY, JSON.stringify(settings));
+}
+
+export function consumePendingTemplate(): StudioTemplateSettings | null {
+  try {
+    const raw = localStorage.getItem(PENDING_TEMPLATE_KEY);
+    if (raw === null) return null;
+    localStorage.removeItem(PENDING_TEMPLATE_KEY);
+    return JSON.parse(raw) as StudioTemplateSettings;
+  } catch {
+    localStorage.removeItem(PENDING_TEMPLATE_KEY);
+    return null;
+  }
 }
 
 // ── Auto-save draft (save text when leaving Studio) ─────────────────────────

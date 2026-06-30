@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -9,66 +9,69 @@ import {
   removeTempDocument,
   toggleTempFavorite,
   setPendingText,
+  setStudioMode,
+  clearPendingText,
+  clearDraft,
   type TempDocument,
 } from "@/services/trackingService";
 import type { Document } from "@/types/database";
-import {
-  FileText,
-  Image as ImageIcon,
-  Clock,
-  Star,
-  Search,
-  Headphones,
-  Download,
-  Plus,
-  Loader2,
-  Trash2,
-  HardDrive,
-  MonitorSmartphone,
-} from "lucide-react";
+import Sidebar, { NavType, TabType } from "@/components/dashboard/Sidebar";
+import FileList, { SortField } from "@/components/dashboard/FileList";
+import { Search, Sparkles, Zap, Image as ImageIcon } from "lucide-react";
+import ResizableSidebar from "@/components/dashboard/ResizableSidebar";
+import TemplateGallery from "@/components/dashboard/TemplateGallery";
 
-/* ── Accent colors for document cards ──────────────────────────────────── */
-const COLORS = [
-  "#bbedc2",
-  "#a6e5f2",
-  "#f2c969",
-  "#fba69d",
-  "#e9d8fd",
-  "#c4e0f9",
-];
-function colorFor(index: number) {
-  return COLORS[index % COLORS.length];
-}
+const NAV_TITLES: Record<NavType, string> = {
+  home: "All Documents",
+  recent: "Recent Files",
+  favorites: "Favorites",
+  cloud: "My Cloud Space",
+  templates: "Template Store",
+  tools: "OCR & Audio Tools",
+};
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  const weeks = Math.floor(days / 7);
-  if (weeks < 5) return `${weeks}w ago`;
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-export default function Home() {
+function DashboardContent() {
   const router = useRouter();
-  const { user, profile, stats, isLoading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const supabase = createClient();
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [tempDocs, setTempDocs] = useState<TempDocument[]>([]);
   const [docsLoading, setDocsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"temporary" | "permanent">(
-    "temporary",
-  );
+
+  // Navigation sidebar & tab state
+  const [activeNav, setActiveNav] = useState<NavType>("home");
+  const [activeTab, setActiveTab] = useState<TabType>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+
+  // Sorting state for documents table
+  const [sortField, setSortField] = useState<SortField>("updated_at");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  /* ── Sync nav state from URL ───────────────────────────────────────── */
+  useEffect(() => {
+    const navParam = searchParams.get("nav") as NavType | null;
+    const validNav: NavType[] = [
+      "home",
+      "recent",
+      "favorites",
+      "cloud",
+      "templates",
+      "tools",
+    ];
+    if (navParam && validNav.includes(navParam)) {
+      setActiveNav(navParam);
+      if (navParam === "home" || navParam === "recent") setActiveTab("all");
+      else if (navParam === "favorites") setActiveTab("favorites");
+      else if (navParam === "cloud") setActiveTab("permanent");
+      if (navParam === "recent") {
+        setSortField("updated_at");
+        setSortOrder("desc");
+      }
+    }
+  }, [searchParams]);
 
   /* ── Fetch permanent documents from Supabase ───────────────────────── */
   const fetchDocuments = useCallback(async () => {
@@ -83,7 +86,7 @@ export default function Home() {
       .select("*")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
-      .limit(12);
+      .limit(20);
     setDocuments(data ?? []);
     setDocsLoading(false);
   }, [user, supabase]);
@@ -132,374 +135,230 @@ export default function Home() {
     router.push("/feature");
   };
 
-  /* ── Derived ───────────────────────────────────────────────────────── */
-  const firstName =
-    profile?.full_name?.split(" ")[0] ||
-    user?.user_metadata?.name?.split(" ")[0] ||
-    "";
-  const greeting = firstName ? `Welcome back, ${firstName}` : "Welcome back";
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
 
-  const filteredPermanentDocs = searchQuery
-    ? documents.filter(
-        (d) =>
-          d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          d.content.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : documents;
-
-  const filteredTempDocs = searchQuery
-    ? tempDocs.filter(
-        (d) =>
-          d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          d.content.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : tempDocs;
-
-  const statCards = [
-    {
-      icon: Download,
-      value: stats?.total_downloads ?? 0,
-      label: "Times Downloaded",
-      color: "text-gray-400",
-      bg: "bg-gray-100",
-    },
-    {
-      icon: ImageIcon,
-      value: stats?.total_images_scanned ?? 0,
-      label: "Scans",
-      color: "text-gray-400",
-      bg: "bg-gray-100",
-    },
-    {
-      icon: Headphones,
-      value: stats?.total_audio_exports ?? 0,
-      label: "Audio Downloaded",
-      color: "text-gray-400",
-      bg: "bg-gray-100",
-    },
-    {
-      icon: FileText,
-      value: stats?.total_documents ?? 0,
-      label: "Documents Imported",
-      color: "text-gray-400",
-      bg: "bg-gray-100",
-    },
+  const allCombinedDocs = [
+    ...tempDocs.map((d) => ({
+      id: d.id,
+      title: d.title,
+      content: d.content,
+      is_favorite: d.isFavorite,
+      updated_at: d.createdAt,
+      type: "temporary" as const,
+      size: new Blob([d.content]).size,
+    })),
+    ...documents.map((d) => ({
+      id: d.id,
+      title: d.title,
+      content: d.content,
+      is_favorite: d.is_favorite,
+      updated_at: d.updated_at,
+      type: "permanent" as const,
+      size: new Blob([d.content]).size,
+    })),
   ];
 
-  const hasAnyDocs = documents.length > 0 || tempDocs.length > 0;
+  const getFilteredAndSortedDocs = () => {
+    let list = allCombinedDocs;
+    if (activeNav === "favorites" || activeTab === "favorites") {
+      list = list.filter((d) => d.is_favorite);
+    } else if (activeNav === "cloud" || activeTab === "permanent") {
+      list = list.filter((d) => d.type === "permanent");
+    } else if (activeTab === "temporary") {
+      list = list.filter((d) => d.type === "temporary");
+    }
+
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (d) => d.title.toLowerCase().includes(q) || d.content.toLowerCase().includes(q)
+      );
+    }
+
+    const sorted = [...list].sort((a, b) => {
+      let comparison = 0;
+      if (sortField === "title") {
+        comparison = (a.title || "").localeCompare(b.title || "");
+      } else if (sortField === "type") {
+        comparison = a.type.localeCompare(b.type);
+      } else if (sortField === "size") {
+        comparison = a.size - b.size;
+      } else if (sortField === "updated_at") {
+        comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+
+    if (activeNav === "recent") {
+      return sorted.slice(0, 20);
+    }
+
+    return sorted;
+  };
+
+  const goToTemplates = () => {
+    setActiveNav("templates");
+    router.replace("/?nav=templates", { scroll: false });
+  };
+
+  const displayedDocs = getFilteredAndSortedDocs();
 
   return (
-    <div className='min-h-[calc(100vh-80px)] bg-(--background)'>
-      <div className='max-w-6xl mx-auto px-5 md:px-10 py-8'>
-        {/* ── Greeting ──────────────────────────────────────── */}
-        <h1 className='text-2xl md:text-3xl font-bold text-(--primary) tracking-tight'>
-          {greeting}
-        </h1>
-        <p className='text-sm text-slate-400 mt-1'>
-          {hasAnyDocs
-            ? "Pick up where you left off or start something new."
-            : "Create your first document to get started."}
-        </p>
-
-        {/* ── Stats ─────────────────────────────────────────── */}
-        {user && (
-          <div className='grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6'>
-            {statCards.map((s) => (
-              <div
-                key={s.label}
-                className='flex items-center gap-3 p-3.5 rounded-xl bg-white border border-slate-100'
-              >
-                <div
-                  className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center shrink-0`}
-                >
-                  <s.icon className={`w-4 h-4 ${s.color}`} />
-                </div>
-                <div>
-                  <p className='text-lg font-bold text-(--primary) leading-none'>
-                    {s.value}
-                  </p>
-                  <p className='text-[11px] text-slate-400 mt-0.5'>{s.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="flex h-screen bg-[var(--background)] overflow-hidden font-sans text-[var(--darkblue)]">
+      {/* 1. SIDEBAR */}
+      <ResizableSidebar>
+        {({ collapsed }) => (
+          <Sidebar
+            activeNav={activeNav}
+            setActiveNav={setActiveNav}
+            setActiveTab={setActiveTab}
+            user={user}
+            profile={profile}
+            authLoading={authLoading}
+            collapsed={collapsed}
+          />
         )}
+      </ResizableSidebar>
 
-        {/* ── Documents section ─────────────────────────────── */}
-        <div className='mt-10'>
-          <div className='flex items-center justify-between gap-4 mb-4'>
-            <h2 className='text-lg font-semibold text-(--primary)'>
-              Recent Documents
+      {/* 2. MAIN WORKSPACE CONTENT AREA */}
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--background)]">
+        <div className="flex-1 overflow-y-auto p-8 space-y-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
+          {/* Global Search Bar */}
+          <div className="relative max-w-2xl w-full">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search documents, cloud files, OCR scans, or templates..."
+              className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--darkblue)]/15 focus:border-honey rounded-2xl text-sm text-[var(--darkblue)] placeholder:text-[var(--darkblue)]/50 outline-none transition-all shadow-sm"
+            />
+          </div>
+
+          {/* Section heading */}
+          <div>
+            <h2 className="text-xl font-bold text-[var(--darkblue)]">
+              {NAV_TITLES[activeNav]}
             </h2>
-            {hasAnyDocs && (
-              <div className='relative max-w-xs flex-1'>
-                <Search className='absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400' />
-                <input
-                  type='text'
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder='Search...'
-                  className='w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm text-(--primary) placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-(--honey)/30 focus:border-(--honey)/50 transition-all'
-                />
-              </div>
+            {activeNav === "recent" && (
+              <p className="text-xs text-[var(--darkblue)]/60 mt-1">
+                Your 20 most recently modified documents
+              </p>
             )}
           </div>
 
-          {/* ── Tab switcher ──────────────────────────────────── */}
-          <div className='flex items-center gap-1 bg-slate-100 rounded-lg p-0.5 w-fit mb-5'>
-            <button
-              onClick={() => setActiveTab("temporary")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
-                activeTab === "temporary"
-                  ? "bg-white text-(--primary) shadow-sm"
-                  : "text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              <MonitorSmartphone className='w-3.5 h-3.5' />
-              Temporary
-              {tempDocs.length > 0 && (
-                <span className='text-[10px] bg-slate-200 rounded-full px-1.5 py-0.5 leading-none'>
-                  {tempDocs.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("permanent")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
-                activeTab === "permanent"
-                  ? "bg-white text-(--primary) shadow-sm"
-                  : "text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              <HardDrive className='w-3.5 h-3.5' />
-              Permanent
-              {documents.length > 0 && (
-                <span className='text-[10px] bg-slate-200 rounded-full px-1.5 py-0.5 leading-none'>
-                  {documents.length}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {docsLoading || authLoading ? (
-            <div className='flex items-center justify-center py-20'>
-              <Loader2 className='w-5 h-5 animate-spin text-slate-300' />
-            </div>
-          ) : activeTab === "temporary" ? (
-            /* ── Temporary docs (localStorage) ────────────── */
-            filteredTempDocs.length > 0 ? (
-              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {/* Go to Studio CTA */}
-                <div
-                  onClick={() => router.push("/feature")}
-                  className='flex flex-col items-center justify-center bg-white rounded-xl border border-dashed border-slate-300 hover:border-(--honey) hover:shadow-sm transition-all cursor-pointer p-5 text-center gap-2'
-                >
-                  <Plus className='w-6 h-6 text-(--honey)' />
-                  <span className='text-sm font-medium text-(--primary)'>
-                    New document
-                  </span>
-                  <span className='text-xs font-medium text-white bg-(--honey) px-3.5 py-1 rounded-lg'>
-                    Go to Studio
-                  </span>
-                </div>
-                {filteredTempDocs.map((doc, i) => (
-                  <div
-                    key={doc.id}
-                    className='text-left bg-white rounded-xl border border-slate-200/60 hover:border-(--honey)/30 hover:shadow-sm transition-all group overflow-hidden cursor-pointer'
-                    onClick={() => openDocument(doc.content)}
-                  >
-                    <div
-                      className='h-1 w-full'
-                      style={{ backgroundColor: colorFor(i) }}
-                    />
-                    <div className='p-4'>
-                      {/* Filename / title on top */}
-                      <div className='flex items-center justify-between gap-2 mb-2'>
-                        <div className='flex items-center gap-1.5 min-w-0'>
-                          <FileText className='w-3.5 h-3.5 text-slate-300 shrink-0' />
-                          <span className='text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate'>
-                            {doc.title}
-                          </span>
-                        </div>
-                        <div className='flex items-center gap-0.5'>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleTempFavorite(doc.id);
-                            }}
-                            className='p-1 rounded-md hover:bg-amber-50 transition-colors cursor-pointer'
-                            title={doc.isFavorite ? "Unfavorite" : "Favorite"}
-                          >
-                            <Star
-                              className={`w-3.5 h-3.5 transition-colors ${
-                                doc.isFavorite
-                                  ? "text-(--honey) fill-(--honey)"
-                                  : "text-slate-300 hover:text-(--honey)"
-                              }`}
-                            />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveTempDoc(doc.id);
-                            }}
-                            className='p-1 rounded-md hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer'
-                            title='Remove'
-                          >
-                            <Trash2 className='w-3.5 h-3.5 text-slate-300 hover:text-red-400' />
-                          </button>
-                        </div>
-                      </div>
-                      <p className='text-xs text-slate-400 line-clamp-2 leading-relaxed'>
-                        {doc.content}
-                      </p>
-                      <div className='flex items-center gap-1.5 mt-3'>
-                        <Clock className='w-3 h-3 text-slate-300' />
-                        <span className='text-[11px] text-slate-400'>
-                          {timeAgo(doc.createdAt)}
-                        </span>
-                        <span className='text-[10px] text-amber-500 bg-amber-50 rounded px-1.5 py-0.5 ml-auto font-medium'>
-                          Local
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState
-                searchQuery={searchQuery}
-                message='No temporary documents'
-                sub='Documents from image scans and file imports appear here temporarily.'
-                onAction={() => router.push("/feature")}
-              />
-            )
-          ) : /* ── Permanent docs (Supabase) ────────────────── */
-          filteredPermanentDocs.length > 0 ? (
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-              {/* Go to Studio CTA */}
-              <div
-                onClick={() => router.push("/feature")}
-                className='flex flex-col items-center justify-center bg-white rounded-xl border border-dashed border-slate-300 hover:border-(--honey) hover:shadow-sm transition-all cursor-pointer p-5 text-center gap-2'
-              >
-                <Plus className='w-6 h-6 text-(--honey)' />
-                <span className='text-sm font-medium text-(--primary)'>
-                  New document
-                </span>
-                <span className='text-xs font-medium text-white bg-(--honey) px-3.5 py-1 rounded-lg'>
-                  Go to Studio
-                </span>
-              </div>
-              {filteredPermanentDocs.map((doc, i) => (
-                <div
-                  key={doc.id}
-                  onClick={() => openDocument(doc.content)}
-                  className='text-left bg-white rounded-xl border border-slate-200/60 hover:border-(--honey)/30 hover:shadow-sm transition-all cursor-pointer group overflow-hidden'
-                >
-                  <div
-                    className='h-1 w-full'
-                    style={{ backgroundColor: colorFor(i) }}
-                  />
-                  <div className='p-4'>
-                    {/* Filename / title on top */}
-                    <div className='flex items-center justify-between gap-2 mb-2'>
-                      <div className='flex items-center gap-1.5 min-w-0'>
-                        <FileText className='w-3.5 h-3.5 text-slate-300 shrink-0' />
-                        <span className='text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate'>
-                          {doc.title}
-                        </span>
-                      </div>
-                      <div className='flex items-center gap-0.5'>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTogglePermanentFavorite(doc);
-                          }}
-                          className='p-1 rounded-md hover:bg-amber-50 transition-colors cursor-pointer'
-                          title={doc.is_favorite ? "Unfavorite" : "Favorite"}
-                        >
-                          <Star
-                            className={`w-3.5 h-3.5 transition-colors ${
-                              doc.is_favorite
-                                ? "text-(--honey) fill-(--honey)"
-                                : "text-slate-300 hover:text-(--honey)"
-                            }`}
-                          />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeletePermanentDoc(doc.id);
-                          }}
-                          className='p-1 rounded-md hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer'
-                          title='Delete'
-                        >
-                          <Trash2 className='w-3.5 h-3.5 text-slate-300 hover:text-red-400' />
-                        </button>
-                      </div>
-                    </div>
-                    <p className='text-xs text-slate-400 line-clamp-2 leading-relaxed'>
-                      {doc.content}
-                    </p>
-                    <div className='flex items-center gap-1.5 mt-3'>
-                      <Clock className='w-3 h-3 text-slate-300' />
-                      <span className='text-[11px] text-slate-400'>
-                        {timeAgo(doc.updated_at)}
-                      </span>
-                      <span className='text-[10px] text-emerald-500 bg-emerald-50 rounded px-1.5 py-0.5 ml-auto font-medium'>
-                        Cloud
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              searchQuery={searchQuery}
-              message='No permanent documents'
-              sub='Import a file in the Studio to save it to the cloud.'
-              onAction={() => router.push("/feature")}
-            />
+          {/* FILE LIST — hidden on templates/tools views */}
+          {(activeNav === "home" ||
+            activeNav === "recent" ||
+            activeNav === "favorites" ||
+            activeNav === "cloud") && (
+          <FileList
+            displayedDocs={displayedDocs}
+            allCombinedDocsCount={allCombinedDocs.length}
+            tempDocsCount={tempDocs.length}
+            permanentDocsCount={documents.length}
+            docsLoading={docsLoading}
+            authLoading={authLoading}
+            searchQuery={searchQuery}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            handleSort={handleSort}
+            openDocument={openDocument}
+            handleToggleTempFavorite={handleToggleTempFavorite}
+            handleTogglePermanentFavorite={handleTogglePermanentFavorite}
+            handleRemoveTempDoc={handleRemoveTempDoc}
+            handleDeletePermanentDoc={handleDeletePermanentDoc}
+            documents={documents}
+          />
           )}
+
+          {/* TOOLS VIEW */}
+          {activeNav === "tools" && (
+            <div className="bg-white rounded-2xl border border-[var(--darkblue)]/10 shadow-sm p-8">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-honey/15 flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-honey" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-[var(--darkblue)]">OCR &amp; Audio Tools</h3>
+                  <p className="text-xs text-[var(--darkblue)]/60">
+                    Scan images and listen to your documents in Studio
+                  </p>
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4 mt-6">
+                <button
+                  onClick={() => {
+                    clearPendingText();
+                    clearDraft();
+                    setStudioMode("ocr");
+                    router.push("/feature");
+                  }}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-[var(--darkblue)]/10 hover:border-honey hover:shadow-sm transition-all cursor-pointer text-left"
+                >
+                  <ImageIcon className="w-5 h-5 text-black shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-[var(--darkblue)]">OCR Image Scan</p>
+                    <p className="text-xs text-[var(--darkblue)]/60 mt-0.5">
+                      Extract text from photos and scanned images
+                    </p>
+                  </div>
+                </button>
+                <button
+                  onClick={() => {
+                    clearPendingText();
+                    clearDraft();
+                    setStudioMode("blank");
+                    router.push("/feature");
+                  }}
+                  className="flex items-center gap-3 p-4 rounded-xl border border-[var(--darkblue)]/10 hover:border-honey hover:shadow-sm transition-all cursor-pointer text-left"
+                >
+                  <Sparkles className="w-5 h-5 text-black shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold text-[var(--darkblue)]">Text-to-Speech Studio</p>
+                    <p className="text-xs text-[var(--darkblue)]/60 mt-0.5">
+                      Open Studio to listen, highlight, and export audio
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* TEMPLATE STORE — single gallery view */}
+          {activeNav === "templates" && <TemplateGallery />}
+
+          {/* Home promo → links to template store */}
+          {activeNav === "home" && (
+            <TemplateGallery compact onExplore={goToTemplates} />
+          )}
+
         </div>
-      </div>
+      </main>
     </div>
   );
 }
 
-/* ── Empty state helper ─────────────────────────────────────────────────── */
-function EmptyState({
-  searchQuery,
-  message,
-  sub,
-  onAction,
-}: {
-  searchQuery: string;
-  message: string;
-  sub: string;
-  onAction: () => void;
-}) {
+export default function Home() {
   return (
-    <div className='flex flex-col items-center py-16 text-center'>
-      <div className='w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4'>
-        <FileText className='w-6 h-6 text-slate-300' />
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-[var(--background)]">
+        <div className="w-6 h-6 border-2 border-honey border-t-transparent rounded-full animate-spin" />
       </div>
-      <p className='text-sm font-medium text-slate-500 mb-1'>
-        {searchQuery ? "No documents match your search" : message}
-      </p>
-      <p className='text-xs text-slate-400 mb-5 max-w-xs'>
-        {searchQuery ? "Try a different search term." : sub}
-      </p>
-      {!searchQuery && (
-        <button
-          onClick={onAction}
-          className='flex items-center gap-2 text-sm font-medium text-white bg-(--honey) hover:opacity-90 px-5 py-2 rounded-lg transition-opacity cursor-pointer'
-        >
-          <Plus className='w-4 h-4' />
-          Go to Studio
-        </button>
-      )}
-    </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }

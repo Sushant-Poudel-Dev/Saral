@@ -11,9 +11,14 @@ import {
   recordDocumentImport,
   saveTempDocument,
   consumePendingText,
+  consumeStudioMode,
+  consumePendingTemplate,
   saveDraft,
   clearDraft,
+  type StudioMode,
 } from "@/services/trackingService";
+import { applyStudioTemplateSettings } from "@/utils/applyStudioTemplate";
+import type { StudioTemplateSettings } from "@/constants/studioTemplates";
 import Modal from "@/components/ui/Modal";
 import TextArea from "@/components/feature/TextArea";
 import TTSControls from "@/components/feature/TTSControls";
@@ -22,6 +27,8 @@ import MobileBottomNavbar from "@/components/feature/MobileBottomNavbar";
 import TypographySection from "@/components/feature/controls/TypographySection";
 import ColorsSection from "@/components/feature/controls/ColorsSection";
 import TTSSection from "@/components/feature/controls/TTSSection";
+import Sidebar, { NavType, TabType } from "@/components/dashboard/Sidebar";
+import ResizableSidebar from "@/components/dashboard/ResizableSidebar";
 
 type ModalType = "typography" | "audio" | "display" | null;
 
@@ -46,20 +53,31 @@ export default function FeaturePage() {
   const textRef = useRef(text);
   const initialLoadDone = useRef(false);
   const lastSavedContent = useRef<string | null>(null);
+  const [studioMode, setStudioModeState] = useState<StudioMode | null>(null);
 
   // Keep ref in sync so the cleanup can access the latest text
   useEffect(() => {
     textRef.current = text;
   }, [text]);
 
-  // On mount: load any pending text passed from dashboard, or restore draft
+  // On mount: load pending text or apply studio entry mode
   useEffect(() => {
     if (initialLoadDone.current) return;
     initialLoadDone.current = true;
+
+    const mode = consumeStudioMode();
     const pending = consumePendingText();
+
     if (pending) {
       setText(pending);
       clearDraft();
+    } else if (mode === "blank") {
+      setText("");
+      clearDraft();
+    }
+
+    if (mode === "ocr" || mode === "import") {
+      setStudioModeState(mode);
     }
   }, []);
 
@@ -89,7 +107,7 @@ export default function FeaturePage() {
   }, []);
 
   const supabase = createClient();
-  const { user, refreshStats, settings: savedSettings } = useAuth();
+  const { user, profile, refreshStats, settings: savedSettings, isLoading: authLoading } = useAuth();
 
   const [speed, setSpeed] = useState("normal");
   const [letterSpacing, setLetterSpacing] = useState(0);
@@ -108,6 +126,10 @@ export default function FeaturePage() {
   const [enableHeatmap, setEnableHeatmap] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const settingsApplied = useRef(false);
+
+  // Sidebar state for feature page
+  const [activeNav, setActiveNav] = useState<NavType>("home");
+  const [activeTab, setActiveTab] = useState<TabType>("all");
 
   // Apply saved settings from profile on mount
   useEffect(() => {
@@ -144,6 +166,39 @@ export default function FeaturePage() {
       else setSpeed("normal");
     }
   }, [savedSettings]);
+
+  const applyTemplate = useCallback((settings: StudioTemplateSettings) => {
+      applyStudioTemplateSettings(settings, {
+        setSpeed,
+        setLetterSpacing,
+        setLineHeight,
+        setFontSize,
+        setFontFamily,
+        setEnableHighlighting,
+        setEnableColorCoding,
+        setColorCodedLetters,
+        setBackgroundColor,
+        setBackgroundTexture,
+        setWordSpacing,
+        setTextAlign,
+        setEnableSyllableSplit,
+        setSyllableSplitThreshold,
+        setEnableHeatmap,
+        setEnableParagraphIsolation,
+        setEnableSentenceIsolation,
+    });
+  }, [
+    setEnableParagraphIsolation,
+    setEnableSentenceIsolation,
+  ]);
+
+  // Apply template preset passed from Template Store
+  useEffect(() => {
+    const template = consumePendingTemplate();
+    if (template) {
+      applyTemplate(template);
+    }
+  }, [applyTemplate]);
 
   const closeModal = () => setActiveModal(null);
 
@@ -232,177 +287,79 @@ export default function FeaturePage() {
   const hasText = text.trim().length > 0;
 
   return (
-    <div className='min-h-[calc(100vh-80px)] flex flex-col'>
-      {/* ── Top bar ───────────────────────────────────────────── */}
-      <div className='px-4 md:px-8 pt-4 pb-2 flex items-center justify-between gap-4'>
-        <div>
-          <h1 className='text-xl! md:text-2xl! font-bold! text-(--primary) tracking-tight leading-tight!'>
-            Reading Studio
-          </h1>
-          <p className='text-xs md:text-sm text-slate-500 mt-0.5'>
-            Upload, paste, or type — then customise your reading experience.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Error banner ──────────────────────────────────────── */}
-      {error && (
-        <div className='mx-4 md:mx-8 mb-2 flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl text-sm animate-fade-in'>
-          <span className='flex-1'>{error}</span>
-          <button
-            onClick={clearError}
-            className='font-bold text-red-400 hover:text-red-600 transition-colors'
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* ── Main workspace ────────────────────────────────────── */}
-      <div className='flex-1 px-4 md:px-8 pb-20 md:pb-8 flex flex-col md:flex-row gap-5'>
-        {/* Text editor column */}
-        <div className='flex-1 min-w-0'>
-          <TextArea
-            text={text}
-            setText={setText}
-            onClear={handleClear}
-            onTextExtracted={handleDocumentUpload}
-            isLoading={isLoading}
-            isPlaying={isPlaying}
-            currentText={currentText}
-            currentWordIndex={currentWordIndex}
-            currentCharIndex={currentCharIndex}
-            enableParagraphIsolation={enableParagraphIsolation}
-            enableSentenceIsolation={enableSentenceIsolation}
-            letterSpacing={letterSpacing}
-            lineHeight={lineHeight}
-            fontSize={fontSize}
-            fontFamily={fontFamily}
-            enableHighlighting={enableHighlighting}
-            enableColorCoding={enableColorCoding}
-            colorCodedLetters={colorCodedLetters}
-            backgroundColor={backgroundColor}
-            backgroundTexture={backgroundTexture}
-            wordSpacing={wordSpacing}
-            textAlign={textAlign}
-            enableSyllableSplit={enableSyllableSplit}
-            syllableSplitThreshold={syllableSplitThreshold}
-            enableHeatmap={enableHeatmap}
-            onSnapshotDownloaded={handleSnapshotDownloaded}
-            onAudioExported={handleAudioExported}
-            onImageScanned={handleImageScanned}
-            onFileImported={handleFileImported}
+    <div className='flex h-screen bg-[var(--background)] overflow-hidden font-sans text-[var(--darkblue)]'>
+      {/* ── Resizable Sidebar ───────────────────────────────── */}
+      <ResizableSidebar>
+        {({ collapsed }) => (
+          <Sidebar
+            activeNav={activeNav}
+            setActiveNav={setActiveNav}
+            setActiveTab={setActiveTab}
+            user={user}
+            profile={profile}
+            authLoading={authLoading}
+            collapsed={collapsed}
           />
-        </div>
+        )}
+      </ResizableSidebar>
 
-        {/* Controls column — desktop */}
-        <div className='hidden md:flex w-85 shrink-0'>
-          <TTSControls
-            text={text}
-            onSubmit={handleTextSubmit}
-            onStop={stop}
-            isLoading={isLoading}
-            isPlaying={isPlaying}
-            speed={speed}
-            setSpeed={setSpeed}
-            enableParagraphIsolation={enableParagraphIsolation}
-            setEnableParagraphIsolation={setEnableParagraphIsolation}
-            enableSentenceIsolation={enableSentenceIsolation}
-            setEnableSentenceIsolation={setEnableSentenceIsolation}
-            letterSpacing={letterSpacing}
-            setLetterSpacing={setLetterSpacing}
-            lineHeight={lineHeight}
-            setLineHeight={setLineHeight}
-            fontSize={fontSize}
-            setFontSize={setFontSize}
-            fontFamily={fontFamily}
-            setFontFamily={setFontFamily}
-            hasText={hasText}
-            enableHighlighting={enableHighlighting}
-            setEnableHighlighting={setEnableHighlighting}
-            enableColorCoding={enableColorCoding}
-            setEnableColorCoding={setEnableColorCoding}
-            colorCodedLetters={colorCodedLetters}
-            setColorCodedLetters={setColorCodedLetters}
-            backgroundColor={backgroundColor}
-            setBackgroundColor={setBackgroundColor}
-            backgroundTexture={backgroundTexture}
-            setBackgroundTexture={setBackgroundTexture}
-            wordSpacing={wordSpacing}
-            setWordSpacing={setWordSpacing}
-            textAlign={textAlign}
-            setTextAlign={setTextAlign}
-            enableSyllableSplit={enableSyllableSplit}
-            setEnableSyllableSplit={setEnableSyllableSplit}
-            syllableSplitThreshold={syllableSplitThreshold}
-            setSyllableSplitThreshold={setSyllableSplitThreshold}
-            enableHeatmap={enableHeatmap}
-            setEnableHeatmap={setEnableHeatmap}
-          />
-        </div>
+      {/* ── Main content area ─────────────────────────────────── */}
+      <div className='flex-1 flex flex-col overflow-hidden'>
+        {/* ── Error banner ──────────────────────────────────────── */}
+        {error && (
+          <div className='mx-4 md:mx-8 my-2 flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-2.5 rounded-xl text-sm animate-fade-in'>
+            <span className='flex-1'>{error}</span>
+            <button
+              onClick={clearError}
+              className='font-bold text-red-400 hover:text-red-600 transition-colors'
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
-        {/* Mobile controls ── bottom sheet modals */}
-        <div className='md:hidden'>
-          <MobileBottomNavbar
-            onSelect={setActiveModal}
-            onPlayStop={isPlaying ? stop : handleTextSubmit}
-            isPlaying={isPlaying}
-            isLoading={isLoading}
-            hasText={hasText}
-          />
-
-          <Modal
-            isOpen={activeModal === "typography"}
-            onClose={closeModal}
-            title='Typography Settings'
-          >
-            <TypographySection
+        {/* ── Main workspace ────────────────────────────────────── */}
+        <div className='flex-1 overflow-y-auto px-4 md:px-8 pt-6 pb-20 md:pb-8 flex flex-col md:flex-row gap-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+          {/* Text editor column */}
+          <div className='flex-1 min-w-0'>
+            <TextArea
+              text={text}
+              setText={setText}
+              onClear={handleClear}
+              onTextExtracted={handleDocumentUpload}
               isLoading={isLoading}
+              isPlaying={isPlaying}
+              currentText={currentText}
+              currentWordIndex={currentWordIndex}
+              currentCharIndex={currentCharIndex}
+              enableParagraphIsolation={enableParagraphIsolation}
+              enableSentenceIsolation={enableSentenceIsolation}
               letterSpacing={letterSpacing}
-              setLetterSpacing={setLetterSpacing}
               lineHeight={lineHeight}
-              setLineHeight={setLineHeight}
               fontSize={fontSize}
-              setFontSize={setFontSize}
               fontFamily={fontFamily}
-              setFontFamily={setFontFamily}
-              wordSpacing={wordSpacing}
-              setWordSpacing={setWordSpacing}
-              textAlign={textAlign}
-              setTextAlign={setTextAlign}
-            />
-          </Modal>
-
-          <Modal
-            isOpen={activeModal === "display"}
-            onClose={closeModal}
-            title='Display Settings'
-          >
-            <ColorsSection
-              isLoading={isLoading}
+              enableHighlighting={enableHighlighting}
               enableColorCoding={enableColorCoding}
-              setEnableColorCoding={setEnableColorCoding}
               colorCodedLetters={colorCodedLetters}
-              setColorCodedLetters={setColorCodedLetters}
               backgroundColor={backgroundColor}
-              setBackgroundColor={setBackgroundColor}
               backgroundTexture={backgroundTexture}
-              setBackgroundTexture={setBackgroundTexture}
+              wordSpacing={wordSpacing}
+              textAlign={textAlign}
               enableSyllableSplit={enableSyllableSplit}
-              setEnableSyllableSplit={setEnableSyllableSplit}
               syllableSplitThreshold={syllableSplitThreshold}
-              setSyllableSplitThreshold={setSyllableSplitThreshold}
               enableHeatmap={enableHeatmap}
-              setEnableHeatmap={setEnableHeatmap}
+              onSnapshotDownloaded={handleSnapshotDownloaded}
+              onAudioExported={handleAudioExported}
+              onImageScanned={handleImageScanned}
+              onFileImported={handleFileImported}
+              autoOpenUpload={studioMode}
             />
-          </Modal>
+          </div>
 
-          <Modal
-            isOpen={activeModal === "audio"}
-            onClose={closeModal}
-            title='Audio Settings'
-          >
-            <TTSSection
+          {/* Controls column — desktop */}
+          <div className='hidden md:flex w-85 shrink-0'>
+            <TTSControls
+              text={text}
               onSubmit={handleTextSubmit}
               onStop={stop}
               isLoading={isLoading}
@@ -413,25 +370,130 @@ export default function FeaturePage() {
               setEnableParagraphIsolation={setEnableParagraphIsolation}
               enableSentenceIsolation={enableSentenceIsolation}
               setEnableSentenceIsolation={setEnableSentenceIsolation}
+              letterSpacing={letterSpacing}
+              setLetterSpacing={setLetterSpacing}
+              lineHeight={lineHeight}
+              setLineHeight={setLineHeight}
+              fontSize={fontSize}
+              setFontSize={setFontSize}
+              fontFamily={fontFamily}
+              setFontFamily={setFontFamily}
+              hasText={hasText}
               enableHighlighting={enableHighlighting}
               setEnableHighlighting={setEnableHighlighting}
+              enableColorCoding={enableColorCoding}
+              setEnableColorCoding={setEnableColorCoding}
+              colorCodedLetters={colorCodedLetters}
+              setColorCodedLetters={setColorCodedLetters}
+              backgroundColor={backgroundColor}
+              setBackgroundColor={setBackgroundColor}
+              backgroundTexture={backgroundTexture}
+              setBackgroundTexture={setBackgroundTexture}
+              wordSpacing={wordSpacing}
+              setWordSpacing={setWordSpacing}
+              textAlign={textAlign}
+              setTextAlign={setTextAlign}
+              enableSyllableSplit={enableSyllableSplit}
+              setEnableSyllableSplit={setEnableSyllableSplit}
+              syllableSplitThreshold={syllableSplitThreshold}
+              setSyllableSplitThreshold={setSyllableSplitThreshold}
+              enableHeatmap={enableHeatmap}
+              setEnableHeatmap={setEnableHeatmap}
+            />
+          </div>
+
+          {/* Mobile controls ── bottom sheet modals */}
+          <div className='md:hidden'>
+            <MobileBottomNavbar
+              onSelect={setActiveModal}
+              onPlayStop={isPlaying ? stop : handleTextSubmit}
+              isPlaying={isPlaying}
+              isLoading={isLoading}
               hasText={hasText}
             />
-          </Modal>
-        </div>
-      </div>
 
-      {/* Hidden download section */}
-      <DownloadSection
-        text={text}
-        lineHeight={lineHeight}
-        letterSpacing={letterSpacing}
-        fontSize={fontSize}
-        fontFamily={fontFamily}
-        backgroundColor={backgroundColor}
-        backgroundTexture={backgroundTexture}
-        colorCodedLetters={colorCodedLetters}
-      />
+            <Modal
+              isOpen={activeModal === "typography"}
+              onClose={closeModal}
+              title='Typography Settings'
+            >
+              <TypographySection
+                isLoading={isLoading}
+                letterSpacing={letterSpacing}
+                setLetterSpacing={setLetterSpacing}
+                lineHeight={lineHeight}
+                setLineHeight={setLineHeight}
+                fontSize={fontSize}
+                setFontSize={setFontSize}
+                fontFamily={fontFamily}
+                setFontFamily={setFontFamily}
+                wordSpacing={wordSpacing}
+                setWordSpacing={setWordSpacing}
+                textAlign={textAlign}
+                setTextAlign={setTextAlign}
+              />
+            </Modal>
+
+            <Modal
+              isOpen={activeModal === "display"}
+              onClose={closeModal}
+              title='Display Settings'
+            >
+              <ColorsSection
+                isLoading={isLoading}
+                enableColorCoding={enableColorCoding}
+                setEnableColorCoding={setEnableColorCoding}
+                colorCodedLetters={colorCodedLetters}
+                setColorCodedLetters={setColorCodedLetters}
+                backgroundColor={backgroundColor}
+                setBackgroundColor={setBackgroundColor}
+                backgroundTexture={backgroundTexture}
+                setBackgroundTexture={setBackgroundTexture}
+                enableSyllableSplit={enableSyllableSplit}
+                setEnableSyllableSplit={setEnableSyllableSplit}
+                syllableSplitThreshold={syllableSplitThreshold}
+                setSyllableSplitThreshold={setSyllableSplitThreshold}
+                enableHeatmap={enableHeatmap}
+                setEnableHeatmap={setEnableHeatmap}
+              />
+            </Modal>
+
+            <Modal
+              isOpen={activeModal === "audio"}
+              onClose={closeModal}
+              title='Audio Settings'
+            >
+              <TTSSection
+                onSubmit={handleTextSubmit}
+                onStop={stop}
+                isLoading={isLoading}
+                isPlaying={isPlaying}
+                speed={speed}
+                setSpeed={setSpeed}
+                enableParagraphIsolation={enableParagraphIsolation}
+                setEnableParagraphIsolation={setEnableParagraphIsolation}
+                enableSentenceIsolation={enableSentenceIsolation}
+                setEnableSentenceIsolation={setEnableSentenceIsolation}
+                enableHighlighting={enableHighlighting}
+                setEnableHighlighting={setEnableHighlighting}
+                hasText={hasText}
+              />
+            </Modal>
+          </div>
+        </div>
+
+        {/* Hidden download section */}
+        <DownloadSection
+          text={text}
+          lineHeight={lineHeight}
+          letterSpacing={letterSpacing}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          backgroundColor={backgroundColor}
+          backgroundTexture={backgroundTexture}
+          colorCodedLetters={colorCodedLetters}
+        />
+      </div>
     </div>
   );
 }
