@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useTTS } from "@/hooks/useTTS";
 import { useAuth } from "@/context/AuthContext";
 import { createClient } from "@/lib/supabase/client";
+import { Menu, X } from "lucide-react";
 import {
   recordDownload,
   recordAudioExport,
@@ -130,6 +131,7 @@ export default function FeaturePage() {
   // Sidebar state for feature page
   const [activeNav, setActiveNav] = useState<NavType>("home");
   const [activeTab, setActiveTab] = useState<TabType>("all");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Apply saved settings from profile on mount
   useEffect(() => {
@@ -288,8 +290,8 @@ export default function FeaturePage() {
 
   return (
     <div className='flex h-screen bg-[var(--background)] overflow-hidden font-sans text-[var(--darkblue)]'>
-      {/* ── Resizable Sidebar ───────────────────────────────── */}
-      <ResizableSidebar>
+      {/* ── Desktop Sidebar ──────────────────────────────── */}
+      <ResizableSidebar hideOnMobile>
         {({ collapsed }) => (
           <Sidebar
             activeNav={activeNav}
@@ -302,6 +304,43 @@ export default function FeaturePage() {
           />
         )}
       </ResizableSidebar>
+
+      {/* ── Mobile hamburger button ────────────────────────── */}
+      <button
+        onClick={() => setMobileSidebarOpen(true)}
+        className='md:hidden fixed top-4 left-4 z-40 w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-md border border-[var(--darkblue)]/10 text-[var(--darkblue)] hover:bg-[var(--cream)] transition-all active:scale-95'
+        aria-label='Open sidebar'
+      >
+        <Menu className='w-5 h-5' />
+      </button>
+
+      {/* ── Mobile sidebar overlay ──────────────────────────── */}
+      {mobileSidebarOpen && (
+        <div className='md:hidden fixed inset-0 z-50 flex'>
+          <div
+            className='fixed inset-0 bg-black/30'
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className='relative w-72 h-full bg-white shadow-xl animate-slide-in-left'>
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className='absolute top-5 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--cream)] hover:bg-[var(--darkblue)]/10 text-[var(--darkblue)] transition-all'
+              aria-label='Close sidebar'
+            >
+              <X className='w-4 h-4' />
+            </button>
+            <Sidebar
+              activeNav={activeNav}
+              setActiveNav={setActiveNav}
+              setActiveTab={setActiveTab}
+              user={user}
+              profile={profile}
+              authLoading={authLoading}
+              collapsed={false}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Main content area ─────────────────────────────────── */}
       <div className='flex-1 flex flex-col overflow-hidden'>

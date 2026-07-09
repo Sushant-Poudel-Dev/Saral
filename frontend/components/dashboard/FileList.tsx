@@ -104,62 +104,66 @@ export default function FileList({
   return (
     <div className='bg-white rounded-2xl border border-[var(--darkblue)]/10 shadow-sm overflow-hidden'>
       {/* Table Filter Header Tabs */}
-      <div className='px-6 py-4 border-b border-[var(--darkblue)]/10 flex flex-wrap items-center justify-between gap-4'>
+      <div className='px-4 md:px-6 py-3 md:py-4 border-b border-[var(--darkblue)]/10 flex flex-wrap items-center justify-between gap-3'>
         {/* Filter Pills */}
-        <div className='flex items-center gap-2 bg-[var(--background)] p-1 rounded-xl'>
+        <div className='flex items-center gap-1.5 md:gap-2 bg-[var(--background)] p-1 rounded-xl overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-2.5 md:px-4 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "all"
                 ? "bg-honey text-white shadow-sm"
                 : "text-[var(--darkblue)]/70 hover:bg-white hover:text-[var(--darkblue)]"
             }`}
           >
-            All Files ({allCombinedDocsCount})
+            All ({allCombinedDocsCount})
           </button>
           <button
             onClick={() => setActiveTab("temporary")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-2.5 md:px-4 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer flex items-center gap-1 md:gap-1.5 whitespace-nowrap ${
               activeTab === "temporary"
                 ? "bg-honey text-white shadow-sm"
                 : "text-[var(--darkblue)]/70 hover:bg-white hover:text-[var(--darkblue)]"
             }`}
           >
             <MonitorSmartphone
-              className={`w-3.5 h-3.5 ${activeTab === "temporary" ? "text-white" : "text-black"}`}
+              className={`hidden md:inline w-3.5 h-3.5 ${activeTab === "temporary" ? "text-white" : "text-black"}`}
             />
-            Temporary ({tempDocsCount})
+            <span className='md:hidden'>Temp</span>
+            <span className='hidden md:inline'>Temporary</span>
+            <span>({tempDocsCount})</span>
           </button>
           <button
             onClick={() => setActiveTab("permanent")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-2.5 md:px-4 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer flex items-center gap-1 md:gap-1.5 whitespace-nowrap ${
               activeTab === "permanent"
                 ? "bg-honey text-white shadow-sm"
                 : "text-[var(--darkblue)]/70 hover:bg-white hover:text-[var(--darkblue)]"
             }`}
           >
             <HardDrive
-              className={`w-3.5 h-3.5 ${activeTab === "permanent" ? "text-white" : "text-black"}`}
+              className={`hidden md:inline w-3.5 h-3.5 ${activeTab === "permanent" ? "text-white" : "text-black"}`}
             />
-            Cloud Saved ({permanentDocsCount})
+            <span className='md:hidden'>Cloud</span>
+            <span className='hidden md:inline'>Cloud Saved</span>
+            <span>({permanentDocsCount})</span>
           </button>
           <button
             onClick={() => setActiveTab("favorites")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-2.5 md:px-4 py-1.5 rounded-lg text-[11px] md:text-xs font-bold transition-all cursor-pointer flex items-center gap-1 md:gap-1.5 whitespace-nowrap ${
               activeTab === "favorites"
                 ? "bg-honey text-white shadow-sm"
                 : "text-[var(--darkblue)]/70 hover:bg-white hover:text-[var(--darkblue)]"
             }`}
           >
             <Star
-              className={`w-3.5 h-3.5 ${activeTab === "favorites" ? "text-white fill-white" : "text-black"}`}
+              className={`hidden md:inline w-3.5 h-3.5 ${activeTab === "favorites" ? "text-white fill-white" : "text-black"}`}
             />
             Starred
           </button>
         </div>
 
-        {/* View Switches (List vs Grid) */}
-        <div className='flex items-center gap-2'>
+        {/* View Switches (List vs Grid) — hidden on mobile */}
+        <div className='hidden md:flex items-center gap-2'>
           <div className='flex items-center bg-[var(--background)] p-1 rounded-lg'>
             <button
               onClick={() => setViewMode("list")}
@@ -212,9 +216,11 @@ export default function FileList({
             Open Studio
           </button>
         </div>
-      ) : viewMode === "list" ? (
-        /* ── TABLE VIEW ────────────────────────────────────────────────────── */
-        <div className='overflow-x-auto'>
+      ) : (
+        <>
+        {/* ── TABLE VIEW ── desktop only ──────────────────────────────────── */}
+        {viewMode === "list" && (
+        <div className='hidden md:block overflow-x-auto'>
           <table className='w-full text-left border-collapse'>
             <thead>
               <tr className='bg-[var(--cream)]/80 text-[11px] font-extrabold text-[var(--primary)] uppercase tracking-wider border-b border-[var(--darkblue)]/10 select-none'>
@@ -237,7 +243,7 @@ export default function FileList({
                 </th>
                 <th
                   onClick={() => handleSort("type")}
-                  className='py-3.5 px-4 cursor-pointer hover:text-black transition-colors'
+                  className='hidden md:table-cell py-3.5 px-4 cursor-pointer hover:text-black transition-colors'
                 >
                   <div className='flex items-center gap-1.5'>
                     <span>Storage Location</span>
@@ -254,7 +260,7 @@ export default function FileList({
                 </th>
                 <th
                   onClick={() => handleSort("updated_at")}
-                  className='py-3.5 px-4 cursor-pointer hover:text-black transition-colors'
+                  className='hidden md:table-cell py-3.5 px-4 cursor-pointer hover:text-black transition-colors'
                 >
                   <div className='flex items-center gap-1.5'>
                     <span>Last Modified</span>
@@ -271,7 +277,7 @@ export default function FileList({
                 </th>
                 <th
                   onClick={() => handleSort("size")}
-                  className='py-3.5 px-4 cursor-pointer hover:text-black transition-colors'
+                  className='hidden md:table-cell py-3.5 px-4 cursor-pointer hover:text-black transition-colors'
                 >
                   <div className='flex items-center gap-1.5'>
                     <span>File Size</span>
@@ -303,18 +309,28 @@ export default function FileList({
                         <FileText className='w-4.5 h-4.5 text-black' />
                       </div>
                       <div className='min-w-0 max-w-md'>
-                        <p className='font-black text-base text-[var(--primary)] group-hover:text-amber-700 transition-colors truncate'>
-                          {doc.title || "Untitled Document"}
-                        </p>
+                        <div className='flex items-center gap-2'>
+                          <p className='font-black text-base text-[var(--primary)] group-hover:text-amber-700 transition-colors truncate'>
+                            {doc.title || "Untitled Document"}
+                          </p>
+                          <span className={`md:hidden inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 ${doc.type === "temporary" ? "bg-[var(--yellow)]/30 border border-slate-300" : "bg-[var(--blue)]/30 border border-blue-200"}`}>
+                            {doc.type === "temporary" ? "Local" : "Cloud"}
+                          </span>
+                        </div>
                         <p className='text-xs text-[var(--darkblue)]/60 font-normal truncate mt-0.5'>
                           {doc.content.slice(0, 70)}...
                         </p>
+                        <div className='md:hidden flex items-center gap-2 mt-1'>
+                          <span className='text-[10px] text-[var(--darkblue)]/50 font-mono'>{getFileSize(doc.content)}</span>
+                          <span className='text-[10px] text-[var(--darkblue)]/40'>•</span>
+                          <span className='text-[10px] text-[var(--darkblue)]/50'>{timeAgo(doc.updated_at)}</span>
+                        </div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Location Badge Column (Gray Border for Local Draft) */}
-                  <td className='py-3.5 px-4'>
+                  {/* Location Badge Column */}
+                  <td className='hidden md:table-cell py-3.5 px-4'>
                     {doc.type === "temporary" ? (
                       <span className='inline-flex items-center gap-1 text-[11px] font-medium text-[var(--darkblue)] bg-[var(--yellow)]/30 border border-slate-300 px-2.5 py-0.5 rounded-full'>
                         <MonitorSmartphone className='w-3 h-3 text-black' />{" "}
@@ -328,12 +344,12 @@ export default function FileList({
                   </td>
 
                   {/* Last Modified Column */}
-                  <td className='py-3.5 px-4 text-xs text-[var(--darkblue)]/70 font-medium'>
+                  <td className='hidden md:table-cell py-3.5 px-4 text-xs text-[var(--darkblue)]/70 font-medium'>
                     {timeAgo(doc.updated_at)}
                   </td>
 
                   {/* File Size Column */}
-                  <td className='py-3.5 px-4 text-xs font-mono text-[var(--darkblue)]/70'>
+                  <td className='hidden md:table-cell py-3.5 px-4 text-xs font-mono text-[var(--darkblue)]/70'>
                     {getFileSize(doc.content)}
                   </td>
 
@@ -377,9 +393,9 @@ export default function FileList({
             </tbody>
           </table>
         </div>
-      ) : (
-        /* ── GRID VIEW (NORMAL TITLE & GRAY BORDER FOR LOCAL DRAFT) ─────────────── */
-        <div className='p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
+        )}
+        {/* ── GRID VIEW ── always on mobile, on desktop only in grid mode ── */}
+        <div className={`${viewMode === "grid" ? "" : "md:hidden"} p-4 md:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4`}>
           {displayedDocs.map((doc) => (
             <div
               key={doc.id}
@@ -439,6 +455,7 @@ export default function FileList({
             </div>
           ))}
         </div>
+        </>
       )}
     </div>
   );

@@ -17,7 +17,7 @@ import {
 import type { Document } from "@/types/database";
 import Sidebar, { NavType, TabType } from "@/components/dashboard/Sidebar";
 import FileList, { SortField } from "@/components/dashboard/FileList";
-import { Search, Sparkles, Zap, Image as ImageIcon } from "lucide-react";
+import { Search, Sparkles, Zap, Image as ImageIcon, Menu, X } from "lucide-react";
 import ResizableSidebar from "@/components/dashboard/ResizableSidebar";
 import TemplateGallery from "@/components/dashboard/TemplateGallery";
 
@@ -45,6 +45,9 @@ function DashboardContent() {
   const [activeNav, setActiveNav] = useState<NavType>("home");
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+
+  // Mobile sidebar state
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Sorting state for documents table
   const [sortField, setSortField] = useState<SortField>("updated_at");
@@ -215,8 +218,8 @@ function DashboardContent() {
 
   return (
     <div className='flex h-screen bg-[var(--background)] overflow-hidden font-sans text-[var(--darkblue)]'>
-      {/* 1. SIDEBAR */}
-      <ResizableSidebar>
+      {/* 1. DESKTOP SIDEBAR */}
+      <ResizableSidebar hideOnMobile>
         {({ collapsed }) => (
           <Sidebar
             activeNav={activeNav}
@@ -230,9 +233,46 @@ function DashboardContent() {
         )}
       </ResizableSidebar>
 
+      {/* 1b. MOBILE HAMBURGER */}
+      <button
+        onClick={() => setMobileSidebarOpen(true)}
+        className='md:hidden fixed top-4 left-4 z-40 w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-md border border-[var(--darkblue)]/10 text-[var(--darkblue)] hover:bg-[var(--cream)] transition-all active:scale-95'
+        aria-label='Open sidebar'
+      >
+        <Menu className='w-5 h-5' />
+      </button>
+
+      {/* 1c. MOBILE SIDEBAR OVERLAY */}
+      {mobileSidebarOpen && (
+        <div className='md:hidden fixed inset-0 z-50 flex'>
+          <div
+            className='fixed inset-0 bg-black/30'
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className='relative w-72 h-full bg-white shadow-xl animate-slide-in-left'>
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className='absolute top-5 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--cream)] hover:bg-[var(--darkblue)]/10 text-[var(--darkblue)] transition-all'
+              aria-label='Close sidebar'
+            >
+              <X className='w-4 h-4' />
+            </button>
+            <Sidebar
+              activeNav={activeNav}
+              setActiveNav={setActiveNav}
+              setActiveTab={setActiveTab}
+              user={user}
+              profile={profile}
+              authLoading={authLoading}
+              collapsed={false}
+            />
+          </div>
+        </div>
+      )}
+
       {/* 2. MAIN WORKSPACE CONTENT AREA */}
       <main className='flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--background)]'>
-        <div className='flex-1 overflow-y-auto p-8 space-y-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
+        <div className='flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-8 space-y-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
           {/* Global Search Bar */}
           <div className='relative max-w-2xl w-full'>
             <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black' />
