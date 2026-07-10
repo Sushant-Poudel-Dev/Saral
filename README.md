@@ -39,7 +39,7 @@
 | TTS / Speech | Web Speech API |
 | State management | React Context / Hooks |
 | Deployment | Vercel |
-| Languages | JavaScript, Python |
+| Languages | TypeScript |
 
 ## 🚀 Getting Started
 
