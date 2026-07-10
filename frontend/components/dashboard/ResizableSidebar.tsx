@@ -10,6 +10,7 @@ const COLLAPSED_THRESHOLD = 112;
 
 interface ResizableSidebarProps {
   children: (props: { width: number; collapsed: boolean }) => React.ReactNode;
+  hideOnMobile?: boolean;
 }
 
 function readStoredWidth(): number {
@@ -24,7 +25,7 @@ function readStoredWidth(): number {
   }
 }
 
-export default function ResizableSidebar({ children }: ResizableSidebarProps) {
+export default function ResizableSidebar({ children, hideOnMobile = false }: ResizableSidebarProps) {
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
@@ -75,7 +76,7 @@ export default function ResizableSidebar({ children }: ResizableSidebarProps) {
 
   return (
     <div
-      className="relative flex shrink-0 h-full"
+      className={`relative shrink-0 h-full ${hideOnMobile ? 'hidden md:flex' : 'flex'}`}
       style={{ width }}
     >
       {children({ width, collapsed })}

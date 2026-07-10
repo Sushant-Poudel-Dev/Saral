@@ -17,7 +17,7 @@ import {
 import type { Document } from "@/types/database";
 import Sidebar, { NavType, TabType } from "@/components/dashboard/Sidebar";
 import FileList, { SortField } from "@/components/dashboard/FileList";
-import { Search, Sparkles, Zap, Image as ImageIcon } from "lucide-react";
+import { Search, Sparkles, Zap, Image as ImageIcon, Menu, X } from "lucide-react";
 import ResizableSidebar from "@/components/dashboard/ResizableSidebar";
 import TemplateGallery from "@/components/dashboard/TemplateGallery";
 
@@ -45,6 +45,9 @@ function DashboardContent() {
   const [activeNav, setActiveNav] = useState<NavType>("home");
   const [activeTab, setActiveTab] = useState<TabType>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+
+  // Mobile sidebar state
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Sorting state for documents table
   const [sortField, setSortField] = useState<SortField>("updated_at");
@@ -178,7 +181,9 @@ function DashboardContent() {
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
-        (d) => d.title.toLowerCase().includes(q) || d.content.toLowerCase().includes(q)
+        (d) =>
+          d.title.toLowerCase().includes(q) ||
+          d.content.toLowerCase().includes(q),
       );
     }
 
@@ -191,7 +196,8 @@ function DashboardContent() {
       } else if (sortField === "size") {
         comparison = a.size - b.size;
       } else if (sortField === "updated_at") {
-        comparison = new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
+        comparison =
+          new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime();
       }
       return sortOrder === "asc" ? comparison : -comparison;
     });
@@ -211,9 +217,9 @@ function DashboardContent() {
   const displayedDocs = getFilteredAndSortedDocs();
 
   return (
-    <div className="flex h-screen bg-[var(--background)] overflow-hidden font-sans text-[var(--darkblue)]">
-      {/* 1. SIDEBAR */}
-      <ResizableSidebar>
+    <div className='flex h-screen bg-[var(--background)] overflow-hidden font-sans text-[var(--darkblue)]'>
+      {/* 1. DESKTOP SIDEBAR */}
+      <ResizableSidebar hideOnMobile>
         {({ collapsed }) => (
           <Sidebar
             activeNav={activeNav}
@@ -227,29 +233,65 @@ function DashboardContent() {
         )}
       </ResizableSidebar>
 
-      {/* 2. MAIN WORKSPACE CONTENT AREA */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--background)]">
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* 1b. MOBILE HAMBURGER */}
+      <button
+        onClick={() => setMobileSidebarOpen(true)}
+        className='md:hidden fixed top-4 left-4 z-40 w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-md border border-[var(--darkblue)]/10 text-[var(--darkblue)] hover:bg-[var(--cream)] transition-all active:scale-95'
+        aria-label='Open sidebar'
+      >
+        <Menu className='w-5 h-5' />
+      </button>
 
+      {/* 1c. MOBILE SIDEBAR OVERLAY */}
+      {mobileSidebarOpen && (
+        <div className='md:hidden fixed inset-0 z-50 flex'>
+          <div
+            className='fixed inset-0 bg-black/30'
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <div className='relative w-72 h-full bg-white shadow-xl animate-slide-in-left'>
+            <button
+              onClick={() => setMobileSidebarOpen(false)}
+              className='absolute top-5 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[var(--cream)] hover:bg-[var(--darkblue)]/10 text-[var(--darkblue)] transition-all'
+              aria-label='Close sidebar'
+            >
+              <X className='w-4 h-4' />
+            </button>
+            <Sidebar
+              activeNav={activeNav}
+              setActiveNav={setActiveNav}
+              setActiveTab={setActiveTab}
+              user={user}
+              profile={profile}
+              authLoading={authLoading}
+              collapsed={false}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 2. MAIN WORKSPACE CONTENT AREA */}
+      <main className='flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--background)]'>
+        <div className='flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-8 space-y-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
           {/* Global Search Bar */}
-          <div className="relative max-w-2xl w-full">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
+          <div className='relative max-w-2xl w-full'>
+            <Search className='absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-black' />
             <input
-              type="text"
+              type='text'
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search documents, cloud files, OCR scans, or templates..."
-              className="w-full pl-11 pr-4 py-3 bg-white border border-[var(--darkblue)]/15 focus:border-honey rounded-2xl text-sm text-[var(--darkblue)] placeholder:text-[var(--darkblue)]/50 outline-none transition-all shadow-sm"
+              placeholder='Search documents, cloud files, OCR scans, or templates...'
+              className='w-full pl-11 pr-4 py-3 bg-white border border-[var(--darkblue)]/15 focus:border-honey rounded-2xl text-sm text-[var(--darkblue)] placeholder:text-[var(--darkblue)]/50 outline-none transition-all shadow-sm'
             />
           </div>
 
           {/* Section heading */}
           <div>
-            <h2 className="text-xl font-bold text-[var(--darkblue)]">
+            <h2 className='text-xl font-bold text-[var(--darkblue)]'>
               {NAV_TITLES[activeNav]}
             </h2>
             {activeNav === "recent" && (
-              <p className="text-xs text-[var(--darkblue)]/60 mt-1">
+              <p className='text-xs text-[var(--darkblue)]/60 mt-1'>
                 Your 20 most recently modified documents
               </p>
             )}
@@ -260,45 +302,47 @@ function DashboardContent() {
             activeNav === "recent" ||
             activeNav === "favorites" ||
             activeNav === "cloud") && (
-          <FileList
-            displayedDocs={displayedDocs}
-            allCombinedDocsCount={allCombinedDocs.length}
-            tempDocsCount={tempDocs.length}
-            permanentDocsCount={documents.length}
-            docsLoading={docsLoading}
-            authLoading={authLoading}
-            searchQuery={searchQuery}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            viewMode={viewMode}
-            setViewMode={setViewMode}
-            sortField={sortField}
-            sortOrder={sortOrder}
-            handleSort={handleSort}
-            openDocument={openDocument}
-            handleToggleTempFavorite={handleToggleTempFavorite}
-            handleTogglePermanentFavorite={handleTogglePermanentFavorite}
-            handleRemoveTempDoc={handleRemoveTempDoc}
-            handleDeletePermanentDoc={handleDeletePermanentDoc}
-            documents={documents}
-          />
+            <FileList
+              displayedDocs={displayedDocs}
+              allCombinedDocsCount={allCombinedDocs.length}
+              tempDocsCount={tempDocs.length}
+              permanentDocsCount={documents.length}
+              docsLoading={docsLoading}
+              authLoading={authLoading}
+              searchQuery={searchQuery}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
+              sortField={sortField}
+              sortOrder={sortOrder}
+              handleSort={handleSort}
+              openDocument={openDocument}
+              handleToggleTempFavorite={handleToggleTempFavorite}
+              handleTogglePermanentFavorite={handleTogglePermanentFavorite}
+              handleRemoveTempDoc={handleRemoveTempDoc}
+              handleDeletePermanentDoc={handleDeletePermanentDoc}
+              documents={documents}
+            />
           )}
 
           {/* TOOLS VIEW */}
           {activeNav === "tools" && (
-            <div className="bg-white rounded-2xl border border-[var(--darkblue)]/10 shadow-sm p-8">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-honey/15 flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-honey" />
+            <div className='bg-white rounded-2xl border border-[var(--darkblue)]/10 shadow-sm p-8'>
+              <div className='flex items-center gap-3 mb-4'>
+                <div className='w-10 h-10 rounded-xl bg-honey/15 flex items-center justify-center'>
+                  <Zap className='w-5 h-5 text-honey' />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-[var(--darkblue)]">OCR &amp; Audio Tools</h3>
-                  <p className="text-xs text-[var(--darkblue)]/60">
+                  <h3 className='text-lg font-bold text-[var(--darkblue)]'>
+                    OCR &amp; Audio Tools
+                  </h3>
+                  <p className='text-xs text-[var(--darkblue)]/60'>
                     Scan images and listen to your documents in Studio
                   </p>
                 </div>
               </div>
-              <div className="grid sm:grid-cols-2 gap-4 mt-6">
+              <div className='grid sm:grid-cols-2 gap-4 mt-6'>
                 <button
                   onClick={() => {
                     clearPendingText();
@@ -306,12 +350,14 @@ function DashboardContent() {
                     setStudioMode("ocr");
                     router.push("/feature");
                   }}
-                  className="flex items-center gap-3 p-4 rounded-xl border border-[var(--darkblue)]/10 hover:border-honey hover:shadow-sm transition-all cursor-pointer text-left"
+                  className='flex items-center gap-3 p-4 rounded-xl border border-[var(--darkblue)]/10 hover:border-honey hover:shadow-sm transition-all cursor-pointer text-left'
                 >
-                  <ImageIcon className="w-5 h-5 text-black shrink-0" />
+                  <ImageIcon className='w-5 h-5 text-black shrink-0' />
                   <div>
-                    <p className="text-sm font-bold text-[var(--darkblue)]">OCR Image Scan</p>
-                    <p className="text-xs text-[var(--darkblue)]/60 mt-0.5">
+                    <p className='text-sm font-bold text-[var(--darkblue)]'>
+                      OCR Image Scan
+                    </p>
+                    <p className='text-xs text-[var(--darkblue)]/60 mt-0.5'>
                       Extract text from photos and scanned images
                     </p>
                   </div>
@@ -323,12 +369,14 @@ function DashboardContent() {
                     setStudioMode("blank");
                     router.push("/feature");
                   }}
-                  className="flex items-center gap-3 p-4 rounded-xl border border-[var(--darkblue)]/10 hover:border-honey hover:shadow-sm transition-all cursor-pointer text-left"
+                  className='flex items-center gap-3 p-4 rounded-xl border border-[var(--darkblue)]/10 hover:border-honey hover:shadow-sm transition-all cursor-pointer text-left'
                 >
-                  <Sparkles className="w-5 h-5 text-black shrink-0" />
+                  <Sparkles className='w-5 h-5 text-black shrink-0' />
                   <div>
-                    <p className="text-sm font-bold text-[var(--darkblue)]">Text-to-Speech Studio</p>
-                    <p className="text-xs text-[var(--darkblue)]/60 mt-0.5">
+                    <p className='text-sm font-bold text-[var(--darkblue)]'>
+                      Text-to-Speech Studio
+                    </p>
+                    <p className='text-xs text-[var(--darkblue)]/60 mt-0.5'>
                       Open Studio to listen, highlight, and export audio
                     </p>
                   </div>
@@ -342,9 +390,11 @@ function DashboardContent() {
 
           {/* Home promo → links to template store */}
           {activeNav === "home" && (
-            <TemplateGallery compact onExplore={goToTemplates} />
+            <TemplateGallery
+              compact
+              onExplore={goToTemplates}
+            />
           )}
-
         </div>
       </main>
     </div>
@@ -353,11 +403,13 @@ function DashboardContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-[var(--background)]">
-        <div className="w-6 h-6 border-2 border-honey border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className='flex h-screen items-center justify-center bg-[var(--background)]'>
+          <div className='w-6 h-6 border-2 border-honey border-t-transparent rounded-full animate-spin' />
+        </div>
+      }
+    >
       <DashboardContent />
     </Suspense>
   );
